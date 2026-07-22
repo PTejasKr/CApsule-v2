@@ -1,0 +1,27 @@
+name: Capsule PR Analyzer
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  capsule-analysis:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Trigger Capsule API
+        run: |
+          # Trigger Capsule's webhook endpoint for GitHub
+          RESPONSE=$(curl -s -X POST "${{ secrets.CAPSULE_API_URL }}/api/webhooks/github" \
+            -H "Content-Type: application/json" \
+            -H "x-hub-signature-256: ${{ secrets.CAPSULE_WEBHOOK_SECRET }}" \
+            -d "{\"action\":\"${{ github.event.action }}\", \"pull_request\": {\"number\": ${{ github.event.pull_request.number }}, \"base\": {\"repo\": {\"full_name\": \"${{ github.repository }}\"}}}}")
+          echo "Capsule API Response: $RESPONSE"
+          
+          # Optional: Enforce policy - Fail build if risk is High
+          # RISK=$(echo $RESPONSE | grep -o '"risk_level":"[^"]*"' | cut -d'"' -f4)
+          # if [ "$RISK" = "High" ]; then
+          #   echo "Capsule blocked merge: High Risk Detected."
+          #   exit 1
+          # fi

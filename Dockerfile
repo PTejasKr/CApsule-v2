@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-COPY backend/requirements.txt .
+COPY extension/backend/requirements.txt .
 
 # Build wheels to cache dependencies
 RUN pip install --no-cache-dir --user -r requirements.txt
@@ -31,7 +31,7 @@ COPY --from=builder --chown=capsule:capsule /root/.local /home/capsule/.local
 ENV PATH=/home/capsule/.local/bin:$PATH
 
 # Copy backend files
-COPY backend /app/backend
+COPY extension/backend /app/extension/backend
 COPY brd /app/brd
 
 # Create data directory for SQLite persistence and set permissions
@@ -42,4 +42,4 @@ USER capsule
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+CMD ["sh", "-c", "uvicorn extension.backend.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

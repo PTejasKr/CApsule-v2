@@ -1,0 +1,16 @@
+trigger: none
+pr:
+  branches:
+    include:
+      - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+steps:
+- script: |
+    curl -s -X POST "$(CAPSULE_API_URL)/api/webhooks/azure" \
+      -H "Content-Type: application/json" \
+      -H "Authorization: Bearer $(CAPSULE_WEBHOOK_SECRET)" \
+      -d "{\"resource\": {\"pullRequestId\": $(System.PullRequest.PullRequestId), \"repository\": {\"name\": \"$(Build.Repository.Name)\"}}}"
+  displayName: 'Run Capsule PR Analysis'

@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Logging in...</title>
+    <style>
+        body { font-family: sans-serif; background: #0f172a; color: white; display: flex; align-items: center; justify-content: center; height: 100vh; }
+    </style>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+        if (token) {
+            localStorage.setItem('capsule_token', token);
+            window.location.href = '/dashboard';
+        } else {
+            window.location.href = '/';
+        }
+    </script>
+</head>
+<body>
+    <p>Logging you in...</p>
+</body>
+</html>

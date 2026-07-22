@@ -94,6 +94,13 @@ graph TD
 - **PATCH**: When bugs are fixed
 - Automatic SemVer bumping on each merge
 
+### 🎛️ Centralized Web Dashboard
+- Independent, hosted dashboard accessible via `/dashboard`
+- **GitHub OAuth Login**: Secure login utilizing GitHub OAuth apps
+- **Role-Based Access Control**: Different views and capabilities for `super_admin` vs normal `user`
+- **Dynamic Theming**: Fluid animated dark/light mode toggle
+- **Profile Configurations**: Dynamically manage LLM choices (NVIDIA NIM, Gemini, Groq, Ollama), AI parameters, and override custom Business Rules and API tokens via the UI.
+
 ### 🎨 Floating Dashboard
 - Chrome extension injects a side panel in GitHub
 - No styling conflicts (Shadow DOM isolated)
@@ -218,200 +225,132 @@ All in **one file**, **one version number**, **from three different repos**.
 
 ## ⚡ Setup & Step-by-Step
 
-### Before You Start
+### 🔧 Manual Setup (Recommended for Dev)
 
-Make sure you have:
-- Docker & Docker Compose installed
-- A GitHub account with a repo
-- 15 minutes of free time
-- Your brain ready to copy-paste commands (jokes aside, this is straightforward)
+## Prerequisites
 
-### Step 1: Clone and Configure
+Before you begin, ensure your system has the following software installed:
 
-```bash
-# Clone the repo
-git clone https://github.com/PTejasKr/Capsule.git
-cd Capsule
+1. **Python 3.10+**: Download and install from [python.org](https://www.python.org/).
+2. **Git**: Download and install from [git-scm.com](https://git-scm.com/).
+3. **uv**: An extremely fast Python package and project manager. Install it via terminal:
+   - macOS/Linux: `curl -LsSf https://astral.sh/uv/install.sh | sh`
+   - Windows: `powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"`
+4. **Google Chrome** (or any Chromium-based browser like Brave or Edge) for loading the Capsule browser extension.
 
-# Copy the example env file
-cp .env.example .env
+---
 
-# Open .env in your editor
-nano .env  # or vim, or your favorite editor
-```
+## Step 1: Clone the Repository
 
-### Step 2: Get Your API Keys
-
-You need 3 keys. Go grab them:
-
-#### 🔑 GitHub Token
-
-1. Go to GitHub → Settings → Developer Settings → Personal Access Tokens (classic)
-2. Click "Generate new token"
-3. Name it `Capsule` or something memorable
-4. Check these boxes:
-   - ✅ `repo` (full control of repos)
-   - ✅ `workflow` (update workflows)
-   - ✅ `admin:repo_hook` (manage webhooks)
-5. Generate and copy the token (you'll only see it once!)
-6. Paste in `.env`:
-   ```
-   GITHUB_TOKEN=ghp_your_token_here
-   ```
-
-#### 🔐 Webhook Secret
-
-Generate a random string (the system will use this to verify GitHub really sent the webhook):
+Open your terminal or command prompt and clone the Capsule repository to your local machine:
 
 ```bash
-# Mac/Linux
-python3 -c "import secrets; print(secrets.token_hex(32))"
-
-# Or just make one up (boring but works)
-# Example: ab12cd34ef56gh78ij90kl12mn34op56
+git clone <your-repository-url> capsule
+cd capsule
 ```
 
-Paste in `.env`:
-```
-GITHUB_WEBHOOK_SECRET=your_random_string_here
-```
+---
 
-#### 🚀 NVIDIA NIM API Key
+## Step 2: Set Up the Virtual Environment
 
-1. Sign up at [NVIDIA NGC](https://ngc.nvidia.com)
-2. Go to API Keys section
-3. Generate a new key (starts with `nvapi-`)
-4. Copy it to `.env`:
-   ```
-   NVIDIA_NIM_API_KEY=nvapi_your_key_here
-   ```
-
-#### 🔐 API Key for Chrome Extension
-
-This is just a random string that the extension uses to authenticate:
+Capsule uses `uv` for dependency management. Create and activate a virtual environment in the root of the project:
 
 ```bash
-# Generate one
-python3 -c "import secrets; print(secrets.token_urlsafe(32))"
+# Create the virtual environment
+uv venv
 
-# Example: KX5vJ8qWpZlM2nR9sT6uVwXyZa1bCdEf
+# Activate the virtual environment
+# On Windows:
+.venv\Scripts\activate
+# On macOS/Linux:
+source .venv/bin/activate
 ```
 
-Paste in `.env`:
-```
-API_KEY=your_generated_key_here
-```
+---
 
-### Step 3: Set Your Release Repository
+## Step 3: Install Dependencies
 
-This is where Capsule will push changelog updates. You can configure this in two ways:
-
-#### Option A: Single-Repository Setup (Simple)
-If you want to keep release logs in the same repository as your codebase, set `CHANGELOG_REPO` to the name of your main code repository:
-```env
-CHANGELOG_REPO=your-github-username/capsule
-```
-*   **How it works:** Capsule will create and commit all release logs, summaries, and workflow diagrams to an isolated, separate `changelog` branch inside the same repository.
-
-#### Option B: Multi-Repository Setup (Consolidated)
-If you manage multiple repositories and want a single, centralized release repository where changelogs from all projects are compiled:
-```env
-CHANGELOG_REPO=your-github-username/centralized-releases
-```
-*   **How it works:** Capsule will push release updates from all monitored repositories to the `changelog` branch of this dedicated releases repository.
-
-*(Note: The target repository must exist on GitHub, but you do not need to create the `changelog` branch manually. Capsule will check for it and auto-create it if it is missing).*
-
-### Step 4: Your Business Rules Document
-
-This file tells Capsule what your business cares about:
-
-Create a file: `./brd/requirements.md`
-
-```markdown
-# Business Requirements Document
-
-## Critical Workflows
-- **Authentication**: Must use OAuth 2.0 with 2FA enabled
-- **Payments**: Must integrate with Stripe (no custom payment logic)
-- **Data Storage**: All PII must be encrypted with AES-256
-
-## Code Standards
-- Backend: FastAPI only (no Django, no Flask)
-- Frontend: React 18+
-- Database: PostgreSQL (no MongoDB)
-
-## Approval Rules
-- Changes to auth flow: Require security review
-- Database schema changes: Require DBA approval
-- Third-party integrations: Require CTO sign-off
-
-## What NOT to do
-- Don't remove Sentry error tracking
-- Don't disable API rate limiting
-- Don't add hardcoded credentials
-```
-
-Capsule will read this and warn if a PR violates any rules.
-
-### Step 5: Start the Containers
+With your virtual environment active, install the required Python packages using the `requirements.txt` file:
 
 ```bash
-# This starts PostgreSQL, Redis, the API, Celery worker, and Nginx
-docker-compose up -d --build
-
-# Watch the startup
-docker-compose logs -f capsule-api-server
-
-# You should see: "Capsule API Service successfully started and ready"
+uv pip install -r requirements.txt
 ```
 
-### Step 6: Verify Everything Works
+---
+
+## Step 4: Environment Configuration
+
+Capsule relies on environment variables for security keys, API endpoints, and third-party integrations (like GitHub and NVIDIA NIM).
+
+1. In the root directory of the project, locate the `.env.example` file.
+2. Make a copy of this file and name it `.env`.
+   - On Windows (Command Prompt): `copy .env.example .env`
+   - On macOS/Linux: `cp .env.example .env`
+3. Open the `.env` file in a text editor and configure the necessary variables. **Important minimum variables to set:**
+   - `API_KEY`: Set this to a secure string. You will need to enter this in the Chrome Extension's options page later.
+   - `GITHUB_TOKEN`: Generate a Personal Access Token (Classic) in GitHub with `repo` scope and paste it here.
+   - `GITHUB_CLIENT_ID`: Your GitHub OAuth App Client ID (Required for user authentication on the dashboard).
+   - `GITHUB_CLIENT_SECRET`: Your GitHub OAuth App Client Secret.
+   - **AI Provider Keys**: Fill in either `NVIDIA_NIM_API_KEY`, `GEMINI_API_KEY`, or `GROQ_API_KEY` depending on which LLM you plan to use for analysis.
+
+---
+
+## Step 5: Initialize the Database
+
+Capsule uses an SQLite database (`capsule.db`) stored in the `./data/` folder. Ensure the data directory exists, and the application will automatically create the required database tables on its first run.
 
 ```bash
-# Check if the API is running
-curl http://localhost:8000/api/health
-
-# You should get back:
-# {"status":"healthy","service":"Capsule PR Analyzer","version":"1.0.0"}
+mkdir data
 ```
 
-### Step 7: Install Chrome Extension
+---
 
-1. Open Chrome
-2. Go to `chrome://extensions/`
-3. Toggle "Developer mode" (top right)
-4. Click "Load unpacked"
-5. Select the `extension` folder in your Capsule directory
-6. Click on the Capsule icon → Settings
-7. Enter:
-   - Backend URL: `http://localhost:8000`
-   - API Key: (the one from `.env` → `API_KEY`)
-8. Click Save
+## Step 6: Start the Backend Server
 
-### Step 8: Set Up Jenkins (Optional but Recommended)
+To start the FastAPI backend server, you need to run Uvicorn from the root directory.
 
-If you're using Jenkins (and most teams are):
-
-1. Go to **Manage Jenkins** → **Manage Credentials**
-2. Add a new credential:
-   - Kind: "Username with password"
-   - Username: `capsule-bot`
-   - Password: (the API_KEY from your `.env`)
-   - ID: `capsule-api-key`
-3. Click Create
-
-Then, in your GitHub repo:
-1. Settings → Webhooks → Add webhook
-2. URL: `http://your-jenkins-server/github-webhook/`
-3. Content-type: `application/json`
-4. Trigger: "Let me select individual events" → Check "Pull requests" and "Pushes"
-5. Click Add webhook
-
-Finally, copy the Jenkinsfile to your repo root:
 ```bash
-cp jenkins/Jenkinsfile ./Jenkinsfile
+# Run the FastAPI server in development (reload) mode
+uv run uvicorn extension.backend.main:app --reload --port 8000
 ```
+
+The server will start and output logs indicating it is listening on `http://127.0.0.1:8000`. 
+- You can access the API documentation at `http://localhost:8000/docs`.
+- You can access the main Dashboard at `http://localhost:8000/dashboard`.
+
+---
+
+## Step 7: Load the Chrome Extension
+
+To use the frontend component of Capsule on GitHub PR pages, you need to load the extension into your browser:
+
+1. Open your Chromium-based browser (Chrome, Brave, Edge).
+2. Navigate to your extensions management page:
+   - Chrome/Brave: `chrome://extensions/`
+   - Edge: `edge://extensions/`
+3. Toggle on **"Developer mode"** (usually in the top right corner).
+4. Click **"Load unpacked"**.
+5. In the file dialog, navigate to your `capsule` project folder, select the `extension/frontend` folder, and click "Select Folder".
+6. The Capsule extension should now appear in your list of installed extensions.
+
+---
+
+## Step 8: Configure the Extension
+
+1. Click on the Capsule extension icon in your browser toolbar (you may need to pin it first).
+2. Right-click the icon and select **"Options"** (or click the settings gear inside the extension popup).
+3. In the options page, ensure the **API URL** points to your local server: `http://localhost:8000`
+4. Enter the same **API Key** that you configured in your `.env` file (`API_KEY`).
+5. Click **Save Settings**.
+
+---
+
+## Troubleshooting
+
+- **"GitHub Client ID not configured" on Dashboard Login**: Ensure you have successfully created a GitHub OAuth application (Authorization callback URL should be `http://localhost:8000/api/auth/github/callback`) and that `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` are correctly populated in your `.env` file.
+- **Server Not Starting / Import Errors**: Ensure you are running Uvicorn from the absolute root directory of the project, not from inside the `extension/backend` folder. If necessary, inject the python path manually: `$env:PYTHONPATH="."; uv run uvicorn extension.backend.main:app --reload --port 8000`
+- **Extension cannot connect to backend**: Verify that Uvicorn is running on port `8000` and that you don't have any typos in the extension's options page.
+
 
 ---
 

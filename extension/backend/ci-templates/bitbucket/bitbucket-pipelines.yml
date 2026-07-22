@@ -1,0 +1,11 @@
+pipelines:
+  pull-requests:
+    '**':
+      - step:
+          name: Capsule PR Analysis
+          script:
+            - >
+              curl -s -X POST "$CAPSULE_API_URL/api/webhooks/bitbucket" 
+              -H "Content-Type: application/json" 
+              -H "Authorization: Bearer $CAPSULE_WEBHOOK_SECRET" 
+              -d "{\"pullrequest\": {\"id\": $BITBUCKET_PR_ID, \"destination\": {\"repository\": {\"full_name\": \"$BITBUCKET_REPO_FULL_NAME\"}}}}"

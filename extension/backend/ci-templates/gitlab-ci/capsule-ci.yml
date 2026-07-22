@@ -1,0 +1,11 @@
+capsule_pr_analysis:
+  stage: test
+  script:
+    - >
+      curl -s -X POST "$CAPSULE_API_URL/api/webhooks/gitlab" 
+      -H "Content-Type: application/json" 
+      -H "X-Gitlab-Token: $CAPSULE_WEBHOOK_SECRET" 
+      -d "{\"object_kind\":\"merge_request\", \"object_attributes\": {\"iid\": $CI_MERGE_REQUEST_IID, \"target\": {\"path_with_namespace\": \"$CI_PROJECT_PATH\"}}}"
+  rules:
+    - if: $CI_MERGE_REQUEST_IID
+  allow_failure: false # Set to true to make it non-blocking

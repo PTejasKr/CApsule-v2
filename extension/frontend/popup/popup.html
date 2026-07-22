@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Capsule PR Analyzer</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="logo-group">
+        <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          <path d="M12 8v8"/>
+          <path d="M8 12h8"/>
+        </svg>
+        <span class="logo-text">Capsule</span>
+      </div>
+      <div class="header-actions">
+        <div class="theme-switch-wrapper" style="margin-right: 10px;">
+          <label class="theme-switch">
+              <input type="checkbox" class="theme-switch__checkbox" id="theme-toggle">
+              <div class="theme-switch__container">
+                  <div class="theme-switch__clouds"></div>
+                  <div class="theme-switch__stars-container">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 55" fill="none">
+                          <path fill-rule="evenodd" clip-rule="evenodd" d="M135.831 3.00688C135.055 3.85027 134.111 4.29946 133 4.35447C134.111 4.40947 135.055 4.85867 135.831 5.71123C136.607 6.55462 136.996 7.56303 136.996 8.72727C136.996 7.95722 137.172 7.25134 137.525 6.59129C137.886 5.93124 138.372 5.39954 138.98 5.00535C139.598 4.60199 140.268 4.39114 141 4.35447C139.88 4.2903 138.936 3.85027 138.16 3.00688C137.384 2.16348 136.996 1.16425 136.996 0C136.996 1.16425 136.607 2.16348 135.831 3.00688ZM31 23.3545C32.1114 23.2995 33.0551 22.8503 33.8313 22.0069C34.6075 21.1635 34.9956 20.1642 34.9956 19C34.9956 20.1642 35.3837 21.1635 36.1599 22.0069C36.9361 22.8503 37.8798 23.2903 39 23.3545C38.2679 23.3911 37.5976 23.602 36.9802 24.0053C36.3716 24.3995 35.8864 24.9312 35.5248 25.5913C35.172 26.2513 34.9956 26.9572 34.9956 27.7273C34.9956 26.563 34.6075 25.5546 33.8313 24.7112C33.0551 23.8587 32.1114 23.4095 31 23.3545ZM0 36.3545C1.11136 36.2995 2.05513 35.8503 2.83131 35.0069C3.6075 34.1635 3.99559 33.1642 3.99559 32C3.99559 33.1642 4.38368 34.1635 5.15987 35.0069C5.93605 35.8503 6.87982 36.2903 8 36.3545C7.26792 36.3911 6.59757 36.602 5.98015 37.0053C5.37155 37.3995 4.88644 37.9312 4.52481 38.5913C4.172 39.2513 3.99559 39.9572 3.99559 40.7273C3.99559 39.563 3.6075 38.5546 2.83131 37.7112C2.05513 36.8587 1.11136 36.4095 0 36.3545ZM56.8313 24.0069C56.0551 24.8503 55.1114 25.2995 54 25.3545C55.1114 25.4095 56.0551 25.8587 56.8313 26.7112C57.6075 27.5546 57.9956 28.563 57.9956 29.7273C57.9956 28.9572 58.172 28.2513 58.5248 27.5913C58.8864 26.9312 59.3716 26.3995 59.9802 26.0053C60.5976 25.602 61.2679 25.3911 62 25.3545C60.8798 25.2903 59.9361 24.8503 59.1599 24.0069C58.3837 23.1635 57.9956 22.1642 57.9956 21C57.9956 22.1642 57.6075 23.1635 56.8313 24.0069ZM81 25.3545C82.1114 25.2995 83.0551 24.8503 83.8313 24.0069C84.6075 23.1635 84.9956 22.1642 84.9956 21C84.9956 22.1642 85.3837 23.1635 86.1599 24.0069C86.9361 24.8503 87.8798 25.2903 89 25.3545C88.2679 25.3911 87.5976 25.602 86.9802 26.0053C86.3716 26.3995 85.8864 26.9312 85.5248 27.5913C85.172 28.2513 84.9956 28.9572 84.9956 29.7273C84.9956 28.563 84.6075 27.5546 83.8313 26.7112C83.0551 25.8587 82.1114 25.4095 81 25.3545ZM136 36.3545C137.111 36.2995 138.055 35.8503 138.831 35.0069C139.607 34.1635 139.996 33.1642 139.996 32C139.996 33.1642 140.384 34.1635 141.16 35.0069C141.936 35.8503 142.88 36.2903 144 36.3545C143.268 36.3911 142.598 36.602 141.98 37.0053C141.372 37.3995 140.886 37.9312 140.525 38.5913C140.172 39.2513 139.996 39.9572 139.996 40.7273C139.996 39.563 139.607 38.5546 138.831 37.7112C138.055 36.8587 137.111 36.4095 136 36.3545ZM101.831 49.0069C101.055 49.8503 100.111 50.2995 99 50.3545C100.111 50.4095 101.055 50.8587 101.831 51.7112C102.607 52.5546 102.996 53.563 102.996 54.7273C102.996 53.9572 103.172 53.2513 103.525 52.5913C103.886 51.9312 104.372 51.3995 104.98 51.0053C105.598 50.602 106.268 50.3911 107 50.3545C105.88 50.2903 104.936 49.8503 104.16 49.0069C103.384 48.1635 102.996 47.1642 102.996 46C102.996 47.1642 102.607 48.1635 101.831 49.0069Z" fill="currentColor"></path>
+                      </svg>
+                  </div>
+                  <div class="theme-switch__circle-container">
+                      <div class="theme-switch__sun-moon-container">
+                          <div class="theme-switch__moon">
+                              <div class="theme-switch__spot"></div>
+                              <div class="theme-switch__spot"></div>
+                              <div class="theme-switch__spot"></div>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          </label>
+        </div>
+        <button id="btn-refresh" title="Refresh Analysis" class="icon-button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+        </button>
+        <button id="btn-settings" title="Settings" class="icon-button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <div id="login-screen" class="state-card" style="margin: 20px;">
+      <h3 style="margin-bottom: 15px;">Setup Required</h3>
+      <p style="text-align: center; color: var(--text-secondary); margin-bottom: 15px;">
+        Please click the Settings icon (⚙️) above to configure your Backend URL and API Key to connect Capsule.
+      </p>
+    </div>
+
+    <div id="app-content" class="hidden">
+    <!-- Tabs Navigation -->
+    <div class="tabs-nav">
+      <button class="tab-button" id="tab-dashboard">Dashboard</button>
+      <button class="tab-button active" id="tab-pr">Current PR</button>
+      <button class="tab-button" id="tab-weekly">Weekly Changes</button>
+      <button class="tab-button" id="tab-workflow">Workflow Diagram</button>
+    </div>
+
+    <!-- Main Content Area -->
+    <main class="app-body">
+      <!-- Error / Empty State -->
+      <div id="state-no-pr" class="state-card hidden">
+        <div class="state-icon">⚠️</div>
+        <h3>No PR Detected</h3>
+        <p>Navigate to a GitHub Pull Request page to view the Capsule analysis.</p>
+      </div>
+
+      <div id="state-error" class="state-card hidden">
+        <div class="state-icon">❌</div>
+        <h3>Analysis Error</h3>
+        <p id="error-message">Could not fetch PR summary. Check your server connection or API key settings.</p>
+        <button id="btn-retry" class="btn btn-primary">Retry Connection</button>
+      </div>
+
+      <!-- DotmSquare7 Loader -->
+      <div id="state-loading" class="state-card loading-state">
+        <div class="dotm-square-7 bloom-glow">
+          <div class="dot-grid">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+          </div>
+        </div>
+        <p class="loading-message">Analyzing repository patterns...</p>
+      </div>
+
+      <!-- Main Dashboard view -->
+      <div id="dashboard-content" class="hidden">
+        
+        <!-- Tab Panel: Multi-Repo Dashboard -->
+        <div id="panel-dashboard" class="tab-panel hidden">
+          <div class="repo-tabs-container">
+             <div id="repo-tabs" class="repo-tabs"></div>
+          </div>
+          <div id="repo-prs-container" class="repo-prs-container">
+             <!-- Stacked cards of PRs for selected repo -->
+          </div>
+          
+          <div id="dashboard-loading" class="state-card loading-state hidden">
+            <p>Loading pending PRs...</p>
+          </div>
+          <div id="dashboard-empty" class="state-card hidden">
+            <p>No pending PRs across any repository!</p>
+          </div>
+        </div>
+
+        <!-- Tab Panel: Current PR Summary -->
+        <div id="panel-pr" class="tab-panel">
+        <!-- PR Info Badge -->
+        <div class="pr-info-card">
+          <div class="pr-title-row">
+            <span id="pr-number" class="pr-badge">PR #--</span>
+            <span id="pr-repo" class="repo-badge">owner/repo</span>
+          </div>
+          <h2 id="pr-title">Loading PR Title...</h2>
+        </div>
+
+        <!-- Workflow Change Banner -->
+        <div id="workflow-impact-banner" class="impact-banner banner-none">
+          <div class="banner-icon-container">
+            <svg id="wf-icon-green" class="banner-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            <svg id="wf-icon-yellow" class="banner-icon hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <svg id="wf-icon-red" class="banner-icon hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          </div>
+          <div class="banner-text">
+            <h4 id="workflow-status-title">No Workflow Impact</h4>
+            <p id="workflow-status-desc">No BRD business processes are modified by these changes.</p>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 15px;">
+          <div class="content-card" style="flex: 1; padding: 10px; margin: 0; text-align: center;">
+            <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 5px;">Risk Assessment Score</div>
+            <div id="risk-score" style="font-size: 20px; font-weight: bold; color: var(--accent-green);">Low</div>
+          </div>
+          <div class="content-card" style="flex: 1; padding: 10px; margin: 0; text-align: center;">
+            <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 5px;">Changed Workflows</div>
+            <div id="changed-workflows-count" style="font-size: 20px; font-weight: bold; color: var(--text-main);">0</div>
+          </div>
+        </div>
+
+        <!-- High-level AI Summary -->
+        <div class="content-card">
+          <h3>AI Analysis Summary</h3>
+          <p id="ai-summary-text" class="summary-paragraph">Summary details loading...</p>
+          <div class="confidence-container">
+            <span class="confidence-label">Confidence:</span>
+            <div class="confidence-bar-bg">
+              <div id="confidence-bar" class="confidence-bar-fill" style="width: 0%"></div>
+            </div>
+            <span id="confidence-text">0%</span>
+          </div>
+        </div>
+
+        <!-- Technical Changes List -->
+        <div class="accordion-item">
+          <button class="accordion-trigger" id="btn-toggle-changes">
+            <span>Detailed Code Changes (<span id="changes-count">0</span>)</span>
+            <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="accordion-content hidden" id="changes-list-container">
+            <ul id="changes-list" class="technical-changes-list">
+              <!-- Dynamically populated -->
+            </ul>
+          </div>
+        </div>
+
+        <!-- Release Changelog Preview -->
+        <div class="accordion-item">
+          <button class="accordion-trigger" id="btn-toggle-changelog">
+            <span>Changelog Preview (<span id="changelog-version">v0.0.0</span>)</span>
+            <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="accordion-content hidden" id="changelog-preview-container">
+            <div class="preview-box">
+              <pre id="changelog-text">Changelog text rendering...</pre>
+              <button id="btn-copy-changelog" class="btn btn-secondary">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                Copy
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Admin Tools: Repair, Compare, Approve -->
+        <div class="content-card admin-tools-card" style="margin-top: 15px; border: 1px solid var(--accent-blue);">
+          <h3 style="color: var(--accent-blue); margin-bottom: 10px;">Admin Actions</h3>
+          <p class="description" style="margin-bottom: 10px; color: #1f1f1f;">Edit the summary below and compare before final approval.</p>
+          <textarea id="admin-summary-edit" class="input-field" rows="4" style="width: 100%; box-sizing: border-box; margin-bottom: 10px; padding: 8px; border-radius: 4px;"></textarea>
+          
+          <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+            <button id="btn-repair" class="btn btn-secondary" style="flex: 1;">Save Edit</button>
+            <button id="btn-compare" class="btn btn-secondary" style="flex: 1;">Compare</button>
+          </div>
+          
+          <div id="compare-results" class="hidden" style="margin-bottom: 10px; padding: 10px; background: rgba(0,0,0,0.05); color: #1f1f1f; border-radius: 4px; font-size: 12px;"></div>
+          
+          <button id="btn-approve" class="btn btn-primary" style="width: 100%; background: #238636;">Approve & Push Changelog</button>
+        </div>
+
+        </div> <!-- End of panel-pr -->
+
+        <!-- Tab Panel: Weekly Changes -->
+        <div id="panel-weekly" class="tab-panel hidden">
+          <div class="content-card">
+            <h3>Weekly Summary (Last 7 Days)</h3>
+            <div id="weekly-loading" class="state-card loading-state" style="margin-top: 10px;">
+              <div class="dotm-square-7 pattern-cross">
+                <div class="dot-grid mini">
+                  <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                  <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                  <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                  <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                  <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                  <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                  <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                </div>
+              </div>
+            </div>
+            <div id="weekly-empty" class="state-card hidden">
+              <p>No changes analyzed in the past 7 days.</p>
+            </div>
+            <ul id="weekly-list" class="technical-changes-list hidden" style="margin-top: 10px;">
+              <!-- Populated dynamically -->
+            </ul>
+          </div>
+        </div>
+
+        <!-- Tab Panel: Workflow Diagram Generator -->
+        <div id="panel-workflow" class="tab-panel hidden">
+          <div class="content-card">
+            <h3>Workflow Diagram Generator</h3>
+            <p class="description" style="color: var(--text-muted); margin-bottom: 12px; font-size: 12px; margin-top: 4px;">
+              Generate or update the system workflow diagram from the active BRD processes using Workers AI.
+            </p>
+            <div class="input-group">
+              <textarea id="wf-prompt-input" class="input-field" placeholder="Describe the workflow processes / rules from the BRD (e.g. User submits order, payment transition flow)..." rows="4"></textarea>
+            </div>
+            <button id="btn-generate-wf" class="btn btn-primary">Generate Workflow Image</button>
+            
+            <div id="wf-image-loading" class="state-card loading-state hidden" style="margin-top: 16px;">
+              <div class="dotm-square-7 bloom-glow">
+                <div class="dot-grid mini">
+                  <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                  <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                  <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                  <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                  <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                  <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                  <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                </div>
+              </div>
+              <p style="margin-top: 8px;">Generating diagram...</p>
+            </div>
+            
+            <div id="wf-image-container" class="image-preview-container hidden">
+              <img id="wf-generated-img" alt="Generated Workflow Diagram" />
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+    </div> <!-- End app-content -->
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,498 @@
+import os
+import re
+import json
+import logging
+import aiosqlite
+import asyncpg
+from extension.backend.config import settings
+
+logger = logging.getLogger("capsule.database")
+
+def get_db_path() -> str:
+    url = settings.DATABASE_URL
+    if url.startswith("sqlite+aiosqlite:///"):
+        path = url.replace("sqlite+aiosqlite:///", "")
+    elif url.startswith("sqlite:///"):
+        path = url.replace("sqlite:///", "")
+    else:
+        return ""
+    
+    dir_name = os.path.dirname(path)
+    if dir_name and not os.path.exists(dir_name):
+        try:
+            os.makedirs(dir_name, exist_ok=True)
+        except Exception as e:
+            logger.warning(f"Could not create database directory: {e}")
+    return path
+
+DB_PATH = get_db_path()
+
+pg_pool = None
+
+def is_pg() -> bool:
+    return settings.DATABASE_URL.startswith("postgresql") or settings.DATABASE_URL.startswith("postgres")
+
+async def get_pg_pool():
+    global pg_pool
+    if pg_pool is None:
+        url = settings.DATABASE_URL
+        if url.startswith("postgresql+asyncpg://"):
+            url = url.replace("postgresql+asyncpg://", "postgresql://")
+        elif url.startswith("postgres://"):
+            url = url.replace("postgres://", "postgresql://")
+        logger.info("Connecting to PostgreSQL database pool...")
+        pg_pool = await asyncpg.create_pool(url)
+    return pg_pool
+
+def convert_placeholders(sql: str, is_postgres: bool) -> str:
+    if not is_postgres:
+        return sql
+    count = 1
+    new_sql = []
+    for part in sql.split('?'):
+        new_sql.append(part)
+        new_sql.append(f"${count}")
+        count += 1
+    new_sql.pop() # remove last $count
+    return "".join(new_sql)
+
+async def init_db():
+    if is_pg():
+        logger.info("Initializing PostgreSQL database...")
+        pool = await get_pg_pool()
+        async with pool.acquire() as conn:
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS profiles (
+                    id SERIAL PRIMARY KEY,
+                    name TEXT NOT NULL UNIQUE,
+                    changelog_repo TEXT NOT NULL,
+                    ai_model TEXT NOT NULL,
+                    brd_content TEXT,
+                    github_token TEXT,
+                    custom_rules TEXT,
+                    is_super_admin BOOLEAN DEFAULT FALSE,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            try:
+                await conn.execute("ALTER TABLE profiles ADD COLUMN custom_rules TEXT;")
+            except Exception:
+                pass
+
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS brd_versions (
+                    id SERIAL PRIMARY KEY,
+                    content TEXT NOT NULL,
+                    version TEXT NOT NULL,
+                    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    hash TEXT NOT NULL UNIQUE,
+                    profile_id INTEGER NOT NULL REFERENCES profiles(id) ON DELETE CASCADE
+                )
+            """)
+
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS teams (
+                    id SERIAL PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    created_by INTEGER NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS team_members (
+                    team_id INTEGER NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+                    profile_id INTEGER NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+                    role TEXT NOT NULL DEFAULT 'member',
+                    PRIMARY KEY (team_id, profile_id)
+                )
+            """)
+
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS repository_mappings (
+                    source_repo TEXT PRIMARY KEY,
+                    team_id INTEGER REFERENCES teams(id) ON DELETE CASCADE,
+                    profile_id INTEGER REFERENCES profiles(id) ON DELETE CASCADE,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS pr_analyses (
+                    pr_number INTEGER NOT NULL,
+                    repo TEXT NOT NULL,
+                    title TEXT,
+                    summary TEXT,
+                    original_summary TEXT,
+                    brd_comparison TEXT,
+                    branch TEXT,
+                    approved BOOLEAN DEFAULT FALSE,
+                    changes_json TEXT,
+                    workflow_impact_json TEXT,
+                    confidence_score REAL,
+                    analyzed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    author TEXT,
+                    merged_at TEXT,
+                    quality_score INTEGER DEFAULT 100,
+                    PRIMARY KEY (pr_number, repo)
+                )
+            """)
+            try:
+                await conn.execute("ALTER TABLE pr_analyses ADD COLUMN brd_comparison TEXT;")
+            except Exception:
+                pass
+            try:
+                await conn.execute("ALTER TABLE pr_analyses ADD COLUMN author TEXT;")
+            except Exception:
+                pass
+            try:
+                await conn.execute("ALTER TABLE pr_analyses ADD COLUMN merged_at TEXT;")
+            except Exception:
+                pass
+            try:
+                await conn.execute("ALTER TABLE pr_analyses ADD COLUMN quality_score INTEGER DEFAULT 100;")
+            except Exception:
+                pass
+            
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS changelog_entries (
+                    id SERIAL PRIMARY KEY,
+                    version TEXT NOT NULL,
+                    date TEXT NOT NULL,
+                    technical_changes_json TEXT,
+                    workflow_changes_json TEXT,
+                    lines_added INTEGER,
+                    lines_deleted INTEGER,
+                    pr_number INTEGER,
+                    pushed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS audit_log (
+                    id SERIAL PRIMARY KEY,
+                    pr_number INTEGER,
+                    input_hash TEXT,
+                    output_json TEXT,
+                    model TEXT,
+                    tokens INTEGER,
+                    latency_ms REAL,
+                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            row = await conn.fetchrow("SELECT id FROM profiles WHERE id = 1")
+            if not row:
+                await conn.execute("""
+                    INSERT INTO profiles (id, name, changelog_repo, ai_model, brd_content, is_super_admin)
+                    VALUES (1, 'default', '', 'meta/llama-3.3-70b-instruct', 'Default BRD', TRUE)
+                """)
+                try:
+                    await conn.execute("SELECT setval('profiles_id_seq', 1)")
+                except Exception:
+                    pass
+                logger.info("Seeded default profile with ID 1 as Super Admin in PostgreSQL")
+            else:
+                try:
+                    await conn.execute("ALTER TABLE profiles ADD COLUMN is_super_admin BOOLEAN DEFAULT FALSE;")
+                    await conn.execute("UPDATE profiles SET is_super_admin = TRUE WHERE id = 1;")
+                except Exception:
+                    pass
+        logger.info("PostgreSQL database tables initialized successfully")
+    else:
+        logger.info(f"Initializing SQLite database at: {DB_PATH}")
+        async with aiosqlite.connect(DB_PATH) as db:
+            db.row_factory = aiosqlite.Row
+            
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS profiles (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL UNIQUE,
+                    changelog_repo TEXT NOT NULL,
+                    ai_model TEXT NOT NULL,
+                    brd_content TEXT,
+                    github_token TEXT,
+                    custom_rules TEXT,
+                    is_super_admin BOOLEAN DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            try:
+                await db.execute("ALTER TABLE profiles ADD COLUMN custom_rules TEXT;")
+            except Exception:
+                pass
+
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS brd_versions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    content TEXT NOT NULL,
+                    version TEXT NOT NULL,
+                    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    hash TEXT NOT NULL UNIQUE,
+                    profile_id INTEGER NOT NULL DEFAULT 1,
+                    FOREIGN KEY(profile_id) REFERENCES profiles(id) ON DELETE CASCADE
+                )
+            """)
+            try:
+                await db.execute("ALTER TABLE brd_versions ADD COLUMN profile_id INTEGER DEFAULT 1;")
+            except Exception:
+                pass
+
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS teams (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    created_by INTEGER NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY(created_by) REFERENCES profiles(id) ON DELETE CASCADE
+                )
+            """)
+
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS team_members (
+                    team_id INTEGER NOT NULL,
+                    profile_id INTEGER NOT NULL,
+                    role TEXT NOT NULL DEFAULT 'member',
+                    PRIMARY KEY (team_id, profile_id),
+                    FOREIGN KEY(team_id) REFERENCES teams(id) ON DELETE CASCADE,
+                    FOREIGN KEY(profile_id) REFERENCES profiles(id) ON DELETE CASCADE
+                )
+            """)
+
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS repository_mappings (
+                    source_repo TEXT PRIMARY KEY,
+                    team_id INTEGER,
+                    profile_id INTEGER,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY(team_id) REFERENCES teams(id) ON DELETE CASCADE,
+                    FOREIGN KEY(profile_id) REFERENCES profiles(id) ON DELETE CASCADE
+                )
+            """)
+            
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS pr_analyses (
+                    pr_number INTEGER NOT NULL,
+                    repo TEXT NOT NULL,
+                    title TEXT,
+                    summary TEXT,
+                    original_summary TEXT,
+                    brd_comparison TEXT,
+                    branch TEXT,
+                    approved BOOLEAN DEFAULT 0,
+                    changes_json TEXT,
+                    workflow_impact_json TEXT,
+                    confidence_score REAL,
+                    analyzed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    author TEXT,
+                    merged_at TEXT,
+                    quality_score INTEGER DEFAULT 100,
+                    PRIMARY KEY (pr_number, repo)
+                )
+            """)
+            try:
+                await db.execute("ALTER TABLE pr_analyses ADD COLUMN brd_comparison TEXT;")
+            except Exception:
+                pass
+            try:
+                await db.execute("ALTER TABLE pr_analyses ADD COLUMN author TEXT;")
+            except Exception:
+                pass
+            try:
+                await db.execute("ALTER TABLE pr_analyses ADD COLUMN merged_at TEXT;")
+            except Exception:
+                pass
+            try:
+                await db.execute("ALTER TABLE pr_analyses ADD COLUMN quality_score INTEGER DEFAULT 100;")
+            except Exception:
+                pass
+            
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS changelog_entries (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    version TEXT NOT NULL,
+                    date TEXT NOT NULL,
+                    technical_changes_json TEXT,
+                    workflow_changes_json TEXT,
+                    lines_added INTEGER,
+                    lines_deleted INTEGER,
+                    pr_number INTEGER,
+                    pushed_at TIMESTAMP
+                )
+            """)
+            
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS audit_log (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    pr_number INTEGER,
+                    input_hash TEXT,
+                    output_json TEXT,
+                    model TEXT,
+                    tokens INTEGER,
+                    latency_ms REAL,
+                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            async with db.execute("SELECT id FROM profiles WHERE id = 1") as cursor:
+                row = await cursor.fetchone()
+            if not row:
+                await db.execute("""
+                    INSERT INTO profiles (id, name, changelog_repo, ai_model, brd_content, is_super_admin)
+                    VALUES (1, 'default', '', 'meta/llama-3.3-70b-instruct', 'Default BRD', 1)
+                """)
+                logger.info("Seeded default profile with ID 1 as Super Admin in SQLite")
+            else:
+                try:
+                    await db.execute("ALTER TABLE profiles ADD COLUMN is_super_admin BOOLEAN DEFAULT 0;")
+                    await db.execute("UPDATE profiles SET is_super_admin = 1 WHERE id = 1;")
+                except Exception:
+                    pass
+            
+            await db.commit()
+        logger.info("SQLite database tables initialized successfully")
+
+async def get_db():
+    if is_pg():
+        pool = await get_pg_pool()
+        async with pool.acquire() as conn:
+            yield conn
+    else:
+        async with aiosqlite.connect(DB_PATH) as db:
+            db.row_factory = aiosqlite.Row
+            yield db
+
+async def execute_query(sql: str, params: tuple = ()) -> int:
+    is_postgres = is_pg()
+    sql_converted = convert_placeholders(sql, is_postgres)
+    
+    if is_postgres:
+        pool = await get_pg_pool()
+        async with pool.acquire() as conn:
+            res = await conn.execute(sql_converted, *params)
+            if res:
+                parts = res.split(" ")
+                if len(parts) > 1 and parts[-1].isdigit():
+                    return int(parts[-1])
+            return 1
+    else:
+        async with aiosqlite.connect(DB_PATH) as db:
+            async with db.execute(sql_converted, params) as cursor:
+                await db.commit()
+                return cursor.rowcount
+
+async def fetch_one(sql: str, params: tuple = ()) -> dict:
+    is_postgres = is_pg()
+    sql_converted = convert_placeholders(sql, is_postgres)
+    
+    if is_postgres:
+        pool = await get_pg_pool()
+        row = await pool.fetchrow(sql_converted, *params)
+        return dict(row) if row else None
+    else:
+        async with aiosqlite.connect(DB_PATH) as db:
+            db.row_factory = aiosqlite.Row
+            async with db.execute(sql_converted, params) as cursor:
+                row = await cursor.fetchone()
+                return dict(row) if row else None
+
+async def fetch_all(sql: str, params: tuple = ()) -> list[dict]:
+    is_postgres = is_pg()
+    sql_converted = convert_placeholders(sql, is_postgres)
+    
+    if is_postgres:
+        pool = await get_pg_pool()
+        rows = await pool.fetch(sql_converted, *params)
+        return [dict(row) for row in rows]
+    else:
+        async with aiosqlite.connect(DB_PATH) as db:
+            db.row_factory = aiosqlite.Row
+            async with db.execute(sql_converted, params) as cursor:
+                rows = await cursor.fetchall()
+                return [dict(row) for row in rows]
+
+async def insert(table: str, data: dict) -> int:
+    keys = list(data.keys())
+    values = list(data.values())
+    
+    processed_values = []
+    for val in values:
+        if isinstance(val, (dict, list)):
+            processed_values.append(json.dumps(val))
+        elif isinstance(val, bool) and not is_pg():
+            processed_values.append(1 if val else 0)
+        else:
+            processed_values.append(val)
+            
+    is_postgres = is_pg()
+    if is_postgres:
+        pool = await get_pg_pool()
+        conflict_targets = []
+        if table == "pr_analyses":
+            conflict_targets = ["pr_number", "repo"]
+        elif table == "profiles":
+            conflict_targets = ["name"]
+        elif table == "repository_mappings":
+            conflict_targets = ["source_repo"]
+        elif table == "brd_versions":
+            conflict_targets = ["hash"]
+
+        _ALLOWED_TABLES = {
+            "pr_analyses", "profiles", "repository_mappings",
+            "brd_versions", "changelog_entries", "audit_log",
+            "teams", "team_members"
+        }
+        _ALLOWED_COLUMNS = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
+
+        if table not in _ALLOWED_TABLES:
+            raise ValueError(f"INSERT rejected: table '{table}' is not in the allowlist.")
+        for col in keys:
+            if not _ALLOWED_COLUMNS.match(col):
+                raise ValueError(f"INSERT rejected: column name '{col}' contains invalid characters.")
+
+        placeholders = ", ".join([f"${i+1}" for i in range(len(keys))])
+        columns = ", ".join(keys)
+
+        sql = f"INSERT INTO {table} ({columns}) VALUES ({placeholders})"  # nosec B608 — table/col names are allowlisted above
+
+        if conflict_targets:
+            conflict_cols = ", ".join(conflict_targets)
+            update_cols = [k for k in keys if k not in conflict_targets]
+            if update_cols:
+                update_stmt = ", ".join([f"{col} = EXCLUDED.{col}" for col in update_cols])
+                sql += f" ON CONFLICT ({conflict_cols}) DO UPDATE SET {update_stmt}"  # nosec B608 — cols from allowlist
+            else:
+                sql += f" ON CONFLICT ({conflict_cols}) DO NOTHING"
+        
+        if table in ["brd_versions", "profiles", "changelog_entries", "audit_log", "teams"]:
+            sql += " RETURNING id"
+        
+        async with pool.acquire() as conn:
+            if "RETURNING id" in sql:
+                row_id = await conn.fetchval(sql, *processed_values)
+                return row_id
+            else:
+                await conn.execute(sql, *processed_values)
+                return 1
+    else:
+        placeholders = ", ".join(["?"] * len(keys))
+        columns = ", ".join(keys)
+        sql = f"INSERT OR REPLACE INTO {table} ({columns}) VALUES ({placeholders})"
+        
+        async with aiosqlite.connect(DB_PATH) as db:
+            async with db.execute(sql, processed_values) as cursor:
+                await db.commit()
+                return cursor.lastrowid
+
+async def execute(sql: str, params: tuple = ()) -> None:
+    is_postgres = is_pg()
+    sql_converted = convert_placeholders(sql, is_postgres)
+    if is_postgres:
+        pool = await get_pg_pool()
+        async with pool.acquire() as conn:
+            await conn.execute(sql_converted, *params)
+    else:
+        async with aiosqlite.connect(DB_PATH) as db:
+            await db.execute(sql_converted, params)
+            await db.commit()
+

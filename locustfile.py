@@ -1,6 +1,5 @@
 from locust import HttpUser, task, between
 import random
-import json
 
 class GitHubUser(HttpUser):
     wait_time = between(0.5, 1.5)

@@ -9,7 +9,7 @@ async def trigger_pr(pr_number: int):
     async with httpx.AsyncClient(timeout=120.0) as client:
         try:
             res = await client.post(
-                "http://localhost:8089/api/webhooks/jenkins",
+                "http://localhost:8000/api/webhooks/jenkins",
                 json={"repo": repo, "pr_number": pr_number},
                 headers={"X-API-Key": "dev-bypass"}
             )
