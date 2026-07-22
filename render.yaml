@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: capsule-backend
+    env: python
+    buildCommand: "pip install -r backend/requirements.txt"
+    startCommand: "uvicorn backend.main:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.0
+      - key: REDIS_URL
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+
+  - type: worker
+    name: capsule-celery
+    env: python
+    buildCommand: "pip install -r backend/requirements.txt"
+    startCommand: "celery -A backend.worker worker --loglevel=info"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.0
+      - key: REDIS_URL
+        fromService:
+          type: web
+          name: capsule-backend
+          envVarKey: REDIS_URL
+      - key: DATABASE_URL
+        fromService:
+          type: web
+          name: capsule-backend
+          envVarKey: DATABASE_URL

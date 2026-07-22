@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Capsule Extension Options</title>
+  <link rel="stylesheet" href="options.css">
+  <style>
+    /* Specific overrides for options page layout */
+    body { padding: 2rem; display: block; height: auto; min-height: 100vh; }
+    .tabs { display: flex; gap: 1rem; margin-bottom: 2rem; border-bottom: 1px solid var(--border); padding-bottom: 1rem; }
+    .tab-btn { background: transparent; border: 1px solid var(--border); color: var(--text); padding: 0.5rem 1rem; cursor: pointer; border-radius: 0; font-family: inherit; font-size: 1rem; transition: all 0.2s; }
+    .tab-btn:hover { background: var(--border); }
+    .tab-btn.active { background: var(--text); color: var(--bg); }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; animation: fadeIn 0.3s; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .form-group { margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 0.5rem; }
+    label { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; color: #888888; }
+    input[type="text"], input[type="password"], select, textarea { background: transparent; border: 1px solid var(--border); padding: 0.75rem; color: var(--text); font-family: inherit; font-size: 1rem; outline: none; border-radius: 0; }
+    input:focus, select:focus, textarea:focus { border-color: var(--text); }
+    textarea { resize: vertical; min-height: 120px; }
+    .help-text { font-size: 0.8rem; color: #888888; }
+    .status-message { margin-top: 1rem; padding: 1rem; border: 1px solid var(--border); font-size: 0.9rem; display: none; }
+    .status-success { color: #2ea043; border-color: rgba(46, 160, 67, 0.4); background: rgba(46, 160, 67, 0.1); }
+    .status-error { color: #da3633; border-color: rgba(218, 54, 51, 0.4); background: rgba(218, 54, 51, 0.1); }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+    #auth-overlay { position: fixed; inset: 0; background: var(--bg); z-index: 100; display: flex; justify-content: center; align-items: center; }
+    .auth-box { width: 100%; max-width: 400px; }
+    
+    /* Theme toggle absolute pos */
+    .theme-switch-wrapper { position: absolute; top: 1.5rem; right: 1.5rem; z-index: 1000; }
+  </style>
+</head>
+<body class="light-mode">
+  <div class="theme-switch-wrapper">
+    <label class="theme-switch">
+        <input type="checkbox" class="theme-switch__checkbox" id="theme-toggle">
+        <div class="theme-switch__container">
+            <div class="theme-switch__clouds"></div>
+            <div class="theme-switch__stars-container">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 55" fill="none">
+                    <path fill-rule="evenodd" clip-rule="evenodd" d="M135.831 3.00688C135.055 3.85027 134.111 4.29946 133 4.35447C134.111 4.40947 135.055 4.85867 135.831 5.71123C136.607 6.55462 136.996 7.56303 136.996 8.72727C136.996 7.95722 137.172 7.25134 137.525 6.59129C137.886 5.93124 138.372 5.39954 138.98 5.00535C139.598 4.60199 140.268 4.39114 141 4.35447C139.88 4.2903 138.936 3.85027 138.16 3.00688C137.384 2.16348 136.996 1.16425 136.996 0C136.996 1.16425 136.607 2.16348 135.831 3.00688ZM31 23.3545C32.1114 23.2995 33.0551 22.8503 33.8313 22.0069C34.6075 21.1635 34.9956 20.1642 34.9956 19C34.9956 20.1642 35.3837 21.1635 36.1599 22.0069C36.9361 22.8503 37.8798 23.2903 39 23.3545C38.2679 23.3911 37.5976 23.602 36.9802 24.0053C36.3716 24.3995 35.8864 24.9312 35.5248 25.5913C35.172 26.2513 34.9956 26.9572 34.9956 27.7273C34.9956 26.563 34.6075 25.5546 33.8313 24.7112C33.0551 23.8587 32.1114 23.4095 31 23.3545ZM0 36.3545C1.11136 36.2995 2.05513 35.8503 2.83131 35.0069C3.6075 34.1635 3.99559 33.1642 3.99559 32C3.99559 33.1642 4.38368 34.1635 5.15987 35.0069C5.93605 35.8503 6.87982 36.2903 8 36.3545C7.26792 36.3911 6.59757 36.602 5.98015 37.0053C5.37155 37.3995 4.88644 37.9312 4.52481 38.5913C4.172 39.2513 3.99559 39.9572 3.99559 40.7273C3.99559 39.563 3.6075 38.5546 2.83131 37.7112C2.05513 36.8587 1.11136 36.4095 0 36.3545ZM56.8313 24.0069C56.0551 24.8503 55.1114 25.2995 54 25.3545C55.1114 25.4095 56.0551 25.8587 56.8313 26.7112C57.6075 27.5546 57.9956 28.563 57.9956 29.7273C57.9956 28.9572 58.172 28.2513 58.5248 27.5913C58.8864 26.9312 59.3716 26.3995 59.9802 26.0053C60.5976 25.602 61.2679 25.3911 62 25.3545C60.8798 25.2903 59.9361 24.8503 59.1599 24.0069C58.3837 23.1635 57.9956 22.1642 57.9956 21C57.9956 22.1642 57.6075 23.1635 56.8313 24.0069ZM81 25.3545C82.1114 25.2995 83.0551 24.8503 83.8313 24.0069C84.6075 23.1635 84.9956 22.1642 84.9956 21C84.9956 22.1642 85.3837 23.1635 86.1599 24.0069C86.9361 24.8503 87.8798 25.2903 89 25.3545C88.2679 25.3911 87.5976 25.602 86.9802 26.0053C86.3716 26.3995 85.8864 26.9312 85.5248 27.5913C85.172 28.2513 84.9956 28.9572 84.9956 29.7273C84.9956 28.563 84.6075 27.5546 83.8313 26.7112C83.0551 25.8587 82.1114 25.4095 81 25.3545ZM136 36.3545C137.111 36.2995 138.055 35.8503 138.831 35.0069C139.607 34.1635 139.996 33.1642 139.996 32C139.996 33.1642 140.384 34.1635 141.16 35.0069C141.936 35.8503 142.88 36.2903 144 36.3545C143.268 36.3911 142.598 36.602 141.98 37.0053C141.372 37.3995 140.886 37.9312 140.525 38.5913C140.172 39.2513 139.996 39.9572 139.996 40.7273C139.996 39.563 139.607 38.5546 138.831 37.7112C138.055 36.8587 137.111 36.4095 136 36.3545ZM101.831 49.0069C101.055 49.8503 100.111 50.2995 99 50.3545C100.111 50.4095 101.055 50.8587 101.831 51.7112C102.607 52.5546 102.996 53.563 102.996 54.7273C102.996 53.9572 103.172 53.2513 103.525 52.5913C103.886 51.9312 104.372 51.3995 104.98 51.0053C105.598 50.602 106.268 50.3911 107 50.3545C105.88 50.2903 104.936 49.8503 104.16 49.0069C103.384 48.1635 102.996 47.1642 102.996 46C102.996 47.1642 102.607 48.1635 101.831 49.0069Z" fill="currentColor"></path>
+                </svg>
+            </div>
+            <div class="theme-switch__circle-container">
+                <div class="theme-switch__sun-moon-container">
+                    <div class="theme-switch__moon">
+                        <div class="theme-switch__spot"></div>
+                        <div class="theme-switch__spot"></div>
+                        <div class="theme-switch__spot"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </label>
+  </div>
+
+  <div id="auth-overlay">
+    <div class="glass-card auth-box text-center">
+      <h2>Capsule Extension</h2>
+      <p class="subtitle" style="margin-bottom: 2rem;">Enter your Backend URL and API Key to access the dashboard.</p>
+      
+      <div class="form-group" style="text-align: left;">
+        <label for="input-login-backend-url">Backend URL</label>
+        <input type="text" id="input-login-backend-url" value="http://localhost:8000">
+      </div>
+
+      <div class="form-group" style="text-align: left;">
+        <label for="input-login-api-key">API Key</label>
+        <input type="password" id="input-login-api-key" placeholder="Enter API Key">
+        <span class="help-text" style="font-size: 0.75rem;">Get this from your Capsule Web Dashboard or your admin.</span>
+      </div>
+      
+      <button id="btn-enter-dashboard" class="btn primary-btn full-width" style="margin-top: 1rem;">Connect</button>
+      
+      <div id="auth-error" class="error" style="display: none; margin-top: 1rem;">Authentication failed</div>
+    </div>
+  </div>
+
+  <div id="app-content" style="display: none; flex-direction: column; max-width: 1000px; margin: 0 auto; position: relative;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+      <h1>Capsule Admin</h1>
+      <button id="btn-logout" class="btn">Logout</button>
+    </div>
+    
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="tab-connection">Connection</button>
+      <button class="tab-btn" data-tab="tab-profiles">Profiles & Teams</button>
+      <button class="tab-btn" data-tab="tab-brd">BRD Manager</button>
+      <button class="tab-btn" data-tab="tab-history">History</button>
+    </div>
+    
+    <div id="tab-connection" class="tab-content active">
+      <div class="card">
+        <h2>Backend Connection</h2>
+        <div class="form-group">
+          <label for="input-api-url">Backend Server URL</label>
+          <input type="text" id="input-api-url" placeholder="http://localhost:8000">
+          <span class="help-text">The base URL of the running Capsule FastAPI backend.</span>
+        </div>
+        
+        <div class="form-group">
+          <label for="input-api-key">X-API-Key</label>
+          <input type="password" id="input-api-key" placeholder="Enter API Key">
+          <span class="help-text">This API Key authorizes the extension to access the backend. It is managed when you log in with GitHub.</span>
+        </div>
+        
+        <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+          <button id="btn-save-conn" class="btn primary-btn">Save Settings</button>
+          <button id="btn-test-conn" class="btn">Test Connection</button>
+        </div>
+        <div id="status-conn" class="status-message"></div>
+      </div>
+    </div>
+
+    <div id="tab-profiles" class="tab-content">
+      <div class="grid-2">
+        <div class="card">
+          <h2>Create Profile</h2>
+          <div class="form-group">
+            <label>Profile Name</label>
+            <input type="text" id="prof-name" placeholder="e.g. Frontend Team">
+          </div>
+          <div class="form-group">
+            <label>Changelog Repo</label>
+            <input type="text" id="prof-changelog" placeholder="owner/repo">
+          </div>
+          <div class="form-group">
+            <label>AI Model</label>
+            <input type="text" id="prof-model" value="meta/llama-3.1-70b-instruct">
+          </div>
+          <div class="form-group">
+            <label>GitHub Token (For Webhooks)</label>
+            <input type="password" id="prof-token" placeholder="ghp_...">
+          </div>
+          <button id="btn-create-prof" class="btn primary-btn mt-2">Create Profile</button>
+          <div id="status-create-prof" class="status-message"></div>
+        </div>
+
+        <div>
+          <div class="card" style="margin-bottom: 2rem;">
+            <h2>Map Repository</h2>
+            <div class="form-group">
+              <label>Select Profile</label>
+              <select id="map-prof-select">
+                <option value="">Load profiles first...</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Source Repo</label>
+              <input type="text" id="map-repo" placeholder="owner/repo">
+            </div>
+            <button id="btn-map-repo" class="btn primary-btn mt-2">Map Repository</button>
+            <div id="status-map" class="status-message"></div>
+          </div>
+
+          <div class="card">
+            <h2>Deploy Webhook (1-Click)</h2>
+            <div class="form-group">
+              <label>Select Profile</label>
+              <select id="deploy-prof-select">
+                <option value="">Load profiles first...</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Target Repo</label>
+              <input type="text" id="deploy-repo" placeholder="owner/repo">
+            </div>
+            <div class="form-group">
+              <label>Webhook Payload URL</label>
+              <input type="text" id="deploy-url" placeholder="https://your-server.com/api/webhooks/github?profile_id=1">
+            </div>
+            <button id="btn-deploy-webhook" class="btn primary-btn mt-2">Deploy Webhook</button>
+            <div id="status-deploy" class="status-message"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="tab-brd" class="tab-content">
+      <div class="form-group" style="max-width: 400px; margin-bottom: 2rem;">
+        <label>Select Profile</label>
+        <select id="brd-prof-select">
+          <option value="">Load profiles first...</option>
+        </select>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h2>Upload New BRD</h2>
+          <div class="form-group">
+            <label>BRD Content (Markdown)</label>
+            <textarea id="brd-content" placeholder="# PRD\n\n## Architecture..."></textarea>
+          </div>
+          <div class="form-group">
+            <label>Version (Optional)</label>
+            <input type="text" id="brd-version" placeholder="v1.0.0">
+          </div>
+          <button id="btn-upload-brd" class="btn primary-btn mt-2">Upload BRD</button>
+          <div id="status-brd" class="status-message"></div>
+        </div>
+
+        <div class="card">
+          <h2>Current Active BRD</h2>
+          <div id="current-brd-info" style="color: #888888; font-size: 0.95rem; margin-bottom: 2rem; white-space: pre-wrap;">
+            Select a profile to view active BRD.
+          </div>
+          <button id="btn-refresh-brd" class="btn">Refresh Status</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="tab-history" class="tab-content">
+      <div class="form-group" style="max-width: 400px; margin-bottom: 2rem;">
+        <label>Select Profile</label>
+        <select id="hist-prof-select">
+          <option value="">Load profiles first...</option>
+        </select>
+      </div>
+      
+      <div id="history-container" style="display: flex; flex-direction: column; gap: 2rem;">
+        <div id="history-present-day">
+          <h3 style="border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">Present Day</h3>
+          <div class="history-list" style="display: flex; flex-direction: column; gap: 1rem;"></div>
+        </div>
+        <div id="history-past-day">
+          <h3 style="border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">Past Day</h3>
+          <div class="history-list" style="display: flex; flex-direction: column; gap: 1rem;"></div>
+        </div>
+        <div id="history-past-week">
+          <h3 style="border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">Past Week</h3>
+          <div class="history-list" style="display: flex; flex-direction: column; gap: 1rem;"></div>
+        </div>
+        <div id="history-past-month">
+          <h3 style="border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">Past Month</h3>
+          <div class="history-list" style="display: flex; flex-direction: column; gap: 1rem;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>
