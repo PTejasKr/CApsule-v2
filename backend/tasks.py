@@ -11,31 +11,16 @@ Key design decisions:
 - All auth tokens come from settings (never from task arguments) to prevent
   accidental serialization of credentials into the Redis queue.
 """
-import asyncio
 import json
 import logging
 from typing import Optional
 
-from celery.utils.log import get_task_logger
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
-
-from backend.worker import celery_app
 from backend.config import settings
 
-logger = get_task_logger("capsule.tasks")
+logger = logging.getLogger("capsule.tasks")
 
 
-
-def _run_async(coro):
-    """Bridge Celery's synchronous task context to async service calls."""
-    loop = asyncio.new_event_loop()
-    try:
-        return loop.run_until_complete(coro)
-    finally:
-        loop.close()
-
-
-async def _core_pr_analysis(repo: str, pr_number: int) -> dict:
+async def analyze_pr_task(repo: str, pr_number: int) -> dict:
     """
     Executes the full PR analysis pipeline:
     1. Resolve profile (model, BRD, changelog_repo)
@@ -51,6 +36,7 @@ async def _core_pr_analysis(repo: str, pr_number: int) -> dict:
     from backend.database import insert, fetch_one
     from backend.middleware.security import sanitize_text
 
+    logger.info(f"Starting analysis — {repo} PR #{pr_number}")
     ai_engine = AIEngine()
     brd_manager = BRDManager()
 
@@ -69,6 +55,7 @@ async def _core_pr_analysis(repo: str, pr_number: int) -> dict:
             "github_token": row["github_token"],
         }
     else:
+        logger.error(f"Repository {repo} is not mapped to any profile. Cannot proceed.")
         raise ValueError(f"Repository {repo} is not mapped to any profile. Cannot proceed.")
 
     brd = profile["brd_content"] or await brd_manager.load_brd(profile["id"])
@@ -106,10 +93,11 @@ async def _core_pr_analysis(repo: str, pr_number: int) -> dict:
         "confidence_score":     summary.confidence_score,
     })
 
-    return summary.model_dump()
+    logger.info(f"Analysis complete — confidence={summary.confidence_score}")
+    return {"status": "success", "pr_number": pr_number, "data": summary.model_dump()}
 
 
-async def _core_changelog(repo: str, pr_number: int) -> dict:
+async def generate_changelog_task(repo: str, pr_number: int) -> dict:
     """Generates and pushes the versioned changelog after a PR merge."""
     import json
     from backend.services.github_service import GitHubService
@@ -119,6 +107,7 @@ async def _core_changelog(repo: str, pr_number: int) -> dict:
         PRSummary, WorkflowImpact, ChangeItem, Severity, ChangeType
     )
 
+    logger.info(f"Generating changelog — {repo} PR #{pr_number}")
     github_service = GitHubService()
     changelog_service = ChangelogService(github_service)
 
@@ -167,49 +156,6 @@ async def _core_changelog(repo: str, pr_number: int) -> dict:
     files_metadata = await github_service.get_pr_files(repo, pr_number)
     entry = await changelog_service.generate_changelog(summary_obj, files_metadata)
     result = await changelog_service.push_changelog(entry, changelog_repo)
-    return {"version": entry.version, "push_result": result}
-
-
-
-@celery_app.task(
-    bind=True,
-    name="capsule.tasks.analyze_pr",
-    max_retries=3,
-    default_retry_delay=20,
-    acks_late=True,
-)
-def analyze_pr_task(self, repo: str, pr_number: int):
-    """
-    Async task: fetch PR, run Map-Reduce LLM analysis, store results.
-    Called via analyze_pr_task.delay(repo, pr_number).
-    """
-    logger.info(f"[Task {self.request.id}] Starting analysis — {repo} PR #{pr_number}")
-    try:
-        result = _run_async(_core_pr_analysis(repo, pr_number))
-        logger.info(f"[Task {self.request.id}] Analysis complete — confidence={result.get('confidence_score')}")
-        return {"status": "success", "pr_number": pr_number, "data": result}
-    except Exception as exc:
-        logger.error(f"[Task {self.request.id}] Analysis failed: {exc}", exc_info=True)
-        raise self.retry(exc=exc, countdown=int(20 * (2 ** self.request.retries)))
-
-
-@celery_app.task(
-    bind=True,
-    name="capsule.tasks.generate_changelog",
-    max_retries=3,
-    default_retry_delay=15,
-    acks_late=True,
-)
-def generate_changelog_task(self, repo: str, pr_number: int):
-    """
-    Async task: generate and push changelog to the target repo after PR merge.
-    Called via generate_changelog_task.delay(repo, pr_number).
-    """
-    logger.info(f"[Task {self.request.id}] Generating changelog — {repo} PR #{pr_number}")
-    try:
-        result = _run_async(_core_changelog(repo, pr_number))
-        logger.info(f"[Task {self.request.id}] Changelog pushed — version={result.get('version')}")
-        return {"status": "success", "pr_number": pr_number, **result}
-    except Exception as exc:
-        logger.error(f"[Task {self.request.id}] Changelog failed: {exc}", exc_info=True)
-        raise self.retry(exc=exc, countdown=int(15 * (2 ** self.request.retries)))
+    
+    logger.info(f"Changelog pushed — version={entry.version}")
+    return {"status": "success", "pr_number": pr_number, "version": entry.version, "push_result": result}

@@ -11,9 +11,8 @@ python-jose[cryptography]==3.3.0
 pytest==8.3.0
 pytest-asyncio==0.24.0
 # Async task queue
-celery==5.4.0
+upstash-qstash==2.7.2
 redis==5.0.4
-kombu==5.3.4
 # Retry & resilience
 tenacity==8.5.0
 # PostgreSQL driver
