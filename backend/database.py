@@ -58,200 +58,108 @@ def convert_placeholders(sql: str, is_postgres: bool) -> str:
     return "".join(new_sql)
 
 async def init_db():
-    if is_pg():
+    tables = [
+        """CREATE TABLE IF NOT EXISTS profiles (
+            id {serial_pk},
+            name TEXT NOT NULL UNIQUE,
+            changelog_repo TEXT NOT NULL,
+            ai_model TEXT NOT NULL,
+            brd_content TEXT,
+            github_token TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )""",
+        """CREATE TABLE IF NOT EXISTS brd_versions (
+            id {serial_pk},
+            content TEXT NOT NULL,
+            version TEXT NOT NULL,
+            uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            hash TEXT NOT NULL UNIQUE,
+            profile_id INTEGER NOT NULL REFERENCES profiles(id) ON DELETE CASCADE
+        )""",
+        """CREATE TABLE IF NOT EXISTS repository_mappings (
+            source_repo TEXT PRIMARY KEY,
+            profile_id INTEGER NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )""",
+        """CREATE TABLE IF NOT EXISTS pr_analyses (
+            pr_number INTEGER NOT NULL,
+            repo TEXT NOT NULL,
+            title TEXT,
+            summary TEXT,
+            original_summary TEXT,
+            brd_comparison TEXT,
+            branch TEXT,
+            approved BOOLEAN DEFAULT {false_val},
+            changes_json TEXT,
+            workflow_impact_json TEXT,
+            confidence_score REAL,
+            analyzed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (pr_number, repo)
+        )""",
+        """CREATE TABLE IF NOT EXISTS changelog_entries (
+            id {serial_pk},
+            version TEXT NOT NULL,
+            date TEXT NOT NULL,
+            technical_changes_json TEXT,
+            workflow_changes_json TEXT,
+            lines_added INTEGER,
+            lines_deleted INTEGER,
+            pr_number INTEGER,
+            pushed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )""",
+        """CREATE TABLE IF NOT EXISTS audit_log (
+            id {serial_pk},
+            pr_number INTEGER,
+            input_hash TEXT,
+            output_json TEXT,
+            model TEXT,
+            tokens INTEGER,
+            latency_ms REAL,
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )"""
+    ]
+
+    is_postgres = is_pg()
+    replacements = {
+        "{serial_pk}": "SERIAL PRIMARY KEY" if is_postgres else "INTEGER PRIMARY KEY AUTOINCREMENT",
+        "{false_val}": "FALSE" if is_postgres else "0"
+    }
+
+    async def execute_schema(db_conn):
+        for stmt in tables:
+            for k, v in replacements.items():
+                stmt = stmt.replace(k, v)
+            await db_conn.execute(stmt)
+            
+        try:
+            await db_conn.execute("ALTER TABLE pr_analyses ADD COLUMN brd_comparison TEXT;")
+        except Exception:
+            pass
+
+    if is_postgres:
         logger.info("Initializing PostgreSQL database...")
         pool = await get_pg_pool()
         async with pool.acquire() as conn:
-            await conn.execute("""
-                CREATE TABLE IF NOT EXISTS profiles (
-                    id SERIAL PRIMARY KEY,
-                    name TEXT NOT NULL UNIQUE,
-                    changelog_repo TEXT NOT NULL,
-                    ai_model TEXT NOT NULL,
-                    brd_content TEXT,
-                    github_token TEXT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
-
-            await conn.execute("""
-                CREATE TABLE IF NOT EXISTS brd_versions (
-                    id SERIAL PRIMARY KEY,
-                    content TEXT NOT NULL,
-                    version TEXT NOT NULL,
-                    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    hash TEXT NOT NULL UNIQUE,
-                    profile_id INTEGER NOT NULL REFERENCES profiles(id) ON DELETE CASCADE
-                )
-            """)
-
-            await conn.execute("""
-                CREATE TABLE IF NOT EXISTS repository_mappings (
-                    source_repo TEXT PRIMARY KEY,
-                    profile_id INTEGER NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
-            
-            await conn.execute("""
-                CREATE TABLE IF NOT EXISTS pr_analyses (
-                    pr_number INTEGER NOT NULL,
-                    repo TEXT NOT NULL,
-                    title TEXT,
-                    summary TEXT,
-                    original_summary TEXT,
-                    brd_comparison TEXT,
-                    branch TEXT,
-                    approved BOOLEAN DEFAULT FALSE,
-                    changes_json TEXT,
-                    workflow_impact_json TEXT,
-                    confidence_score REAL,
-                    analyzed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    PRIMARY KEY (pr_number, repo)
-                )
-            """)
-            try:
-                await conn.execute("ALTER TABLE pr_analyses ADD COLUMN brd_comparison TEXT;")
-            except Exception:
-                pass
-            
-            await conn.execute("""
-                CREATE TABLE IF NOT EXISTS changelog_entries (
-                    id SERIAL PRIMARY KEY,
-                    version TEXT NOT NULL,
-                    date TEXT NOT NULL,
-                    technical_changes_json TEXT,
-                    workflow_changes_json TEXT,
-                    lines_added INTEGER,
-                    lines_deleted INTEGER,
-                    pr_number INTEGER,
-                    pushed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
-            
-            await conn.execute("""
-                CREATE TABLE IF NOT EXISTS audit_log (
-                    id SERIAL PRIMARY KEY,
-                    pr_number INTEGER,
-                    input_hash TEXT,
-                    output_json TEXT,
-                    model TEXT,
-                    tokens INTEGER,
-                    latency_ms REAL,
-                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
-            
+            await execute_schema(conn)
             row = await conn.fetchrow("SELECT id FROM profiles WHERE id = 1")
             if not row:
-                await conn.execute("""
-                    INSERT INTO profiles (id, name, changelog_repo, ai_model, brd_content)
-                    VALUES (1, 'default', '', 'meta/llama-3.3-70b-instruct', 'Default BRD')
-                """)
+                await conn.execute("INSERT INTO profiles (id, name, changelog_repo, ai_model, brd_content) VALUES (1, 'default', '', 'meta/llama-3.3-70b-instruct', 'Default BRD')")
                 try:
                     await conn.execute("SELECT setval('profiles_id_seq', 1)")
                 except Exception:
                     pass
-                logger.info("Seeded default profile with ID 1 in PostgreSQL")
-        logger.info("PostgreSQL database tables initialized successfully")
     else:
         logger.info(f"Initializing SQLite database at: {DB_PATH}")
         async with aiosqlite.connect(DB_PATH) as db:
-            db.row_factory = aiosqlite.Row
-            
-            await db.execute("""
-                CREATE TABLE IF NOT EXISTS profiles (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    name TEXT NOT NULL UNIQUE,
-                    changelog_repo TEXT NOT NULL,
-                    ai_model TEXT NOT NULL,
-                    brd_content TEXT,
-                    github_token TEXT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
-
-            await db.execute("""
-                CREATE TABLE IF NOT EXISTS brd_versions (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    content TEXT NOT NULL,
-                    version TEXT NOT NULL,
-                    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    hash TEXT NOT NULL UNIQUE,
-                    profile_id INTEGER NOT NULL,
-                    FOREIGN KEY(profile_id) REFERENCES profiles(id) ON DELETE CASCADE
-                )
-            """)
-
-            await db.execute("""
-                CREATE TABLE IF NOT EXISTS repository_mappings (
-                    source_repo TEXT PRIMARY KEY,
-                    profile_id INTEGER NOT NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY(profile_id) REFERENCES profiles(id) ON DELETE CASCADE
-                )
-            """)
-            
-            await db.execute("""
-                CREATE TABLE IF NOT EXISTS pr_analyses (
-                    pr_number INTEGER NOT NULL,
-                    repo TEXT NOT NULL,
-                    title TEXT,
-                    summary TEXT,
-                    original_summary TEXT,
-                    brd_comparison TEXT,
-                    branch TEXT,
-                    approved BOOLEAN DEFAULT 0,
-                    changes_json TEXT,
-                    workflow_impact_json TEXT,
-                    confidence_score REAL,
-                    analyzed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    PRIMARY KEY (pr_number, repo)
-                )
-            """)
-            try:
-                await db.execute("ALTER TABLE pr_analyses ADD COLUMN brd_comparison TEXT;")
-            except Exception:
-                pass
-            
-            await db.execute("""
-                CREATE TABLE IF NOT EXISTS changelog_entries (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    version TEXT NOT NULL,
-                    date TEXT NOT NULL,
-                    technical_changes_json TEXT,
-                    workflow_changes_json TEXT,
-                    lines_added INTEGER,
-                    lines_deleted INTEGER,
-                    pr_number INTEGER,
-                    pushed_at TIMESTAMP
-                )
-            """)
-            
-            await db.execute("""
-                CREATE TABLE IF NOT EXISTS audit_log (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    pr_number INTEGER,
-                    input_hash TEXT,
-                    output_json TEXT,
-                    model TEXT,
-                    tokens INTEGER,
-                    latency_ms REAL,
-                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
-            
+            await execute_schema(db)
             async with db.execute("SELECT id FROM profiles WHERE id = 1") as cursor:
                 row = await cursor.fetchone()
             if not row:
-                await db.execute("""
-                    INSERT INTO profiles (id, name, changelog_repo, ai_model, brd_content)
-                    VALUES (1, 'default', '', 'meta/llama-3.3-70b-instruct', 'Default BRD')
-                """)
-                logger.info("Seeded default profile with ID 1 in SQLite")
-            
+                await db.execute("INSERT INTO profiles (id, name, changelog_repo, ai_model, brd_content) VALUES (1, 'default', '', 'meta/llama-3.3-70b-instruct', 'Default BRD')")
             await db.commit()
-        logger.info("SQLite database tables initialized successfully")
+            
+    logger.info("Database initialized successfully")
+
 
 async def get_db():
     if is_pg():

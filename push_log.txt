@@ -1,0 +1,7 @@
+remote: 
+remote: Create a pull request for 'feature/diagram-demo' on GitHub by visiting:        
+remote:      https://github.com/PTejasKr/CApsule-v2/pull/new/feature/diagram-demo        
+remote: 
+To https://github.com/PTejasKr/CApsule-v2.git
+ * [new branch]      HEAD -> feature/diagram-demo
+branch 'feature/diagram-demo' set up to track 'origin/feature/diagram-demo'.

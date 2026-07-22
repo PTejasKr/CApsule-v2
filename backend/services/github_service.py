@@ -2,6 +2,7 @@ import base64
 import logging
 import asyncio
 import httpx
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 from typing import List, Dict, Any, Optional, Union
 from backend.config import settings
 
@@ -17,47 +18,19 @@ class GitHubService:
             self.headers["Authorization"] = f"token {self.token}"
         self.base_url = "https://api.github.com"
 
+    @retry(
+        stop=stop_after_attempt(5),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((httpx.RequestError, httpx.HTTPStatusError)),
+        reraise=True
+    )
     async def _request_with_backoff(self, method: str, url: str, **kwargs) -> httpx.Response:
-        """
-        Executes HTTP request with exponential backoff on 403 Rate Limit or 5xx server errors.
-        """
-        headers = self.headers.copy()
-        if "headers" in kwargs:
-            headers.update(kwargs.pop("headers"))
-
-        max_retries = 5
-        backoff_factor = 2.0
-        
+        headers = {**self.headers, **kwargs.pop("headers", {})}
         async with httpx.AsyncClient(timeout=30.0) as client:
-            for attempt in range(max_retries):
-                try:
-                    response = await client.request(method, url, headers=headers, **kwargs)
-                    
-                    if response.status_code == 403 and "X-RateLimit-Remaining" in response.headers:
-                        remaining = int(response.headers.get("X-RateLimit-Remaining", 0))
-                        if remaining == 0:
-                            reset_time = int(response.headers.get("X-RateLimit-Reset", 0))
-                            import time
-                            sleep_time = max(reset_time - time.time(), 5.0)
-                            logger.warning(f"GitHub rate limit hit. Sleeping for {sleep_time:.1f} seconds (attempt {attempt + 1})")
-                            await asyncio.sleep(sleep_time)
-                            continue
-                            
-                    if response.status_code >= 500:
-                        sleep_time = backoff_factor ** attempt
-                        logger.warning(f"GitHub server error {response.status_code}. Retrying in {sleep_time:.1f} seconds")
-                        await asyncio.sleep(sleep_time)
-                        continue
-                        
-                    return response
-                except httpx.RequestError as e:
-                    sleep_time = backoff_factor ** attempt
-                    logger.warning(f"Network error calling GitHub: {e}. Retrying in {sleep_time:.1f} seconds")
-                    await asyncio.sleep(sleep_time)
-                    if attempt == max_retries - 1:
-                        raise e
-            
-            return await client.request(method, url, headers=headers, **kwargs)
+            res = await client.request(method, url, headers=headers, **kwargs)
+            if res.status_code >= 500 or (res.status_code == 403 and res.headers.get("X-RateLimit-Remaining") == "0"):
+                res.raise_for_status()
+            return res
 
     async def get_pr_details(self, repo: str, pr_number: int) -> Dict[str, Any]:
         """

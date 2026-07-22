@@ -15,11 +15,9 @@ from backend.config import settings
 
 logger = logging.getLogger("capsule.worker")
 
-REDIS_HOST = getattr(settings, "REDIS_HOST", "redis")
-REDIS_PORT = getattr(settings, "REDIS_PORT", 6379)
+BROKER_URL   = f"{settings.REDIS_URL}/0"
+BACKEND_URL  = f"{settings.REDIS_URL}/1"
 
-BROKER_URL   = f"redis://{REDIS_HOST}:{REDIS_PORT}/0"
-BACKEND_URL  = f"redis://{REDIS_HOST}:{REDIS_PORT}/1"
 
 celery_app = Celery(
     "capsule",

@@ -26,6 +26,7 @@ class Settings(BaseSettings):
 
     BRD_FILE_PATH: str = Field("./brd/requirements.md", description="Path to the Business Requirement Document")
     DATABASE_URL: str = Field("sqlite+aiosqlite:///./data/capsule.db", description="Database connection URL")
+    REDIS_URL: str = Field("redis://redis:6379", description="Full Redis connection URL (e.g., for Upstash)")
     LOG_LEVEL: str = Field("INFO", description="Log level (DEBUG, INFO, WARNING, ERROR)")
     CLOUDFLARE_WORKER_URL: str = Field("http://localhost:8787", description="Cloudflare Worker URL for image generation and summaries")
     GLOBAL_REDUCE_ENABLED: bool = Field(True, description="Run a holistic LLM reduce pass over merged chunks to capture cross-file relationships")

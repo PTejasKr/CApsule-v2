@@ -2,6 +2,7 @@ import json
 import logging
 import hashlib
 import time
+import re
 from typing import List, Dict, Any, Tuple, Optional
 import asyncio
 from backend.config import settings
@@ -43,22 +44,7 @@ class AIEngine:
         )
 
     def _parse_diff_files(self, diff: str) -> List[str]:
-        """
-        Parses a unified diff and returns a list of all files that were added, modified, or deleted.
-        """
-        changed_files = set()
-        for line in diff.splitlines():
-            if line.startswith("--- a/"):
-                file_path = line[6:].strip()
-                if file_path and file_path != "/dev/null":
-                    file_path = file_path.split(" ")[0].split("\t")[0]
-                    changed_files.add(file_path)
-            elif line.startswith("+++ b/"):
-                file_path = line[6:].strip()
-                if file_path and file_path != "/dev/null":
-                    file_path = file_path.split(" ")[0].split("\t")[0]
-                    changed_files.add(file_path)
-        return list(changed_files)
+        return list(set(re.findall(r"^(?:--- a/|\+\+\+ b/)(?!/dev/null)([^\t\n ]+)", diff, flags=re.MULTILINE)))
 
     def cross_validate_output(self, ai_output: Dict[str, Any], actual_files: List[str]) -> Dict[str, Any]:
         """
