@@ -5,7 +5,7 @@
 [![Docker](https://img.shields.io/badge/Docker-Enabled-blue?logo=docker&logoColor=white)](https://www.docker.com/)
 [![License](https://img.shields.io/badge/License-MIT-purple)](LICENSE)
 
-**Capsule** is an AI-powered CI/CD companion that watches your pull requests, checks them against your Business Requirements, spots risky changes, and auto-publishes versioned changelogs. Think of it as having a senior engineer reviewing every PR, but faster and without the coffee breaks.
+**Capsule** is an AI-powered CI/CD companion that watches your pull requests, checks them against your Business Requirements, spots risky changes, and auto-publishes versioned changelogs. Think of [...](https://github.com/PTejasKr/CApsule-v2#quick-overview)
 
 ---
 
@@ -37,6 +37,7 @@ What does Capsule actually do?
 ## Architecture
 
 ```mermaid
+%%{init: {'theme': 'dark', 'themeVariables': { 'fontSize': '16px', 'fontFamily': 'arial', 'primaryTextColor':'#ffffff', 'primaryBorderColor':'#cccccc', 'lineColor':'#ffffff', 'secondBkgColor':'#1e1e1e', 'tertiaryTextColor':'#ffffff', 'fontFamily': 'helvetica' }}}%%
 graph TD
     subgraph GitHub["📦 GitHub"]
         PR["You open a PR"]
@@ -63,10 +64,22 @@ graph TD
     Analyzer -->|"AI Analysis"| Cache
     Cache --> PRComment
     Cache --> Changelog
+    
+    style GitHub fill:#0d47a1,stroke:#ffffff,stroke-width:2px,color:#ffffff
+    style Jenkins fill:#1a5490,stroke:#ffffff,stroke-width:2px,color:#ffffff
+    style Capsule fill:#2d5016,stroke:#ffffff,stroke-width:2px,color:#ffffff
+    style Output fill:#1b5e20,stroke:#ffffff,stroke-width:2px,color:#ffffff
+    style PR fill:#ffffff,stroke:#333,stroke-width:2px,color:#000000
+    style Webhook fill:#ffffff,stroke:#333,stroke-width:2px,color:#000000
+    style BRD fill:#ffffff,stroke:#333,stroke-width:2px,color:#000000
+    style Analyzer fill:#ffffff,stroke:#333,stroke-width:2px,color:#000000
+    style Cache fill:#ffffff,stroke:#333,stroke-width:2px,color:#000000
+    style PRComment fill:#ffffff,stroke:#333,stroke-width:2px,color:#000000
+    style Changelog fill:#ffffff,stroke:#333,stroke-width:2px,color:#000000
 ```
 
 **Flow in human terms:**
-> Your GitHub webhook triggers Jenkins → Jenkins tells Capsule → Capsule loads your business rules → AI analyzes the PR diff → Results are cached → Chrome extension shows summary → On merge, changelog auto-updates
+> Your GitHub webhook triggers Jenkins → Jenkins tells Capsule → Capsule loads your business rules → AI analyzes the PR diff → Results are cached → Chrome extension shows summary → On [...]
 
 ---
 
@@ -145,6 +158,7 @@ Your Organization
 ### What Happens
 
 ```mermaid
+%%{init: {'theme': 'dark', 'themeVariables': { 'fontSize': '16px', 'fontFamily': 'arial', 'primaryTextColor':'#ffffff', 'primaryBorderColor':'#cccccc', 'lineColor':'#ffffff', 'secondBkgColor':'#1e1e1e', 'tertiaryTextColor':'#ffffff', 'fontFamily': 'helvetica' }}}%%
 graph LR
     Repo1["📱 Frontend Repo<br/>PR #42 Opened"]
     Repo2["⚙️ Backend Repo<br/>PR #88 Opened"]
@@ -177,10 +191,16 @@ graph LR
     
     Cache -->|"On merge to main"| Release
     
-    style Repo1 fill:#e1f5ff
-    style Repo2 fill:#e1f5ff
-    style Repo3 fill:#e1f5ff
-    style Release fill:#c8e6c9
+    style Repo1 fill:#0d47a1,stroke:#ffffff,stroke-width:2px,color:#ffffff
+    style Repo2 fill:#0d47a1,stroke:#ffffff,stroke-width:2px,color:#ffffff
+    style Repo3 fill:#0d47a1,stroke:#ffffff,stroke-width:2px,color:#ffffff
+    style Webhook1 fill:#ffffff,stroke:#333,stroke-width:2px,color:#000000
+    style Webhook2 fill:#ffffff,stroke:#333,stroke-width:2px,color:#000000
+    style Webhook3 fill:#ffffff,stroke:#333,stroke-width:2px,color:#000000
+    style Jenkins fill:#1a5490,stroke:#ffffff,stroke-width:2px,color:#ffffff
+    style Capsule fill:#2d5016,stroke:#ffffff,stroke-width:2px,color:#ffffff
+    style Cache fill:#ffffff,stroke:#333,stroke-width:2px,color:#000000
+    style Release fill:#1b5e20,stroke:#ffffff,stroke-width:2px,color:#ffffff
 ```
 
 ### Real Example: Multi-Repo Changelog
@@ -582,7 +602,7 @@ Why we don't trust AI blindly:
 Capsule analyzes large PRs in two stages so nothing gets silently dropped:
 
 1. **Map** – The unified diff is split into file-bounded chunks (`max 300 lines` each) and analyzed concurrently. This keeps any single PR within the LLM's context window.
-2. **Reduce (holistic)** – The merged per-chunk results are sent back to the LLM **once** for a global pass. This captures relationships that span chunks (renamed functions, shared helpers, cross-file workflow transitions) that per-chunk analysis alone would miss.
+2. **Reduce (holistic)** – The merged per-chunk results are sent back to the LLM **once** for a global pass. This captures relationships that span chunks (renamed functions, shared helpers, cro[...])
 3. **Critic + Cross-validate** – The reduced output is verified against the raw diff and stripped of any fabricated file references (see the 8-Layer Shield above).
 
 The holistic reduce pass is controlled by `GLOBAL_REDUCE_ENABLED` (default `true`). Set it to `false` to skip the extra LLM call and fall back to the raw merged chunks for lower latency/cost.
@@ -621,6 +641,7 @@ When your team merges PRs to main across all 3 repos, Capsule:
 ### Data Flow
 
 ```mermaid
+%%{init: {'theme': 'dark', 'themeVariables': { 'fontSize': '16px', 'fontFamily': 'arial', 'primaryTextColor':'#ffffff', 'primaryBorderColor':'#cccccc', 'lineColor':'#ffffff', 'secondBkgColor':'#1e1e1e', 'tertiaryTextColor':'#ffffff', 'fontFamily': 'helvetica' }}}%%
 sequenceDiagram
     participant Dev as Developer
     participant GH as GitHub
