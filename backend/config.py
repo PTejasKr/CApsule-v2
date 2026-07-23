@@ -27,6 +27,15 @@ class Settings(BaseSettings):
     BRD_FILE_PATH: str = Field("./brd/requirements.md", description="Path to the Business Requirement Document")
     DATABASE_URL: str = Field("sqlite+aiosqlite:///./data/capsule.db", description="Database connection URL")
     REDIS_URL: str = Field("redis://redis:6379", description="Full Redis connection URL (e.g., for Upstash)")
+    
+    QSTASH_URL: str = Field("https://qstash-us-east-1.upstash.io", description="Upstash QStash URL")
+    QSTASH_TOKEN: str = Field("", description="Upstash QStash API Token")
+    QSTASH_CURRENT_SIGNING_KEY: str = Field("", description="Upstash QStash current signing key")
+    QSTASH_NEXT_SIGNING_KEY: str = Field("", description="Upstash QStash next signing key")
+    
+    UPSTASH_REDIS_REST_URL: str = Field("https://rational-buck-119535.upstash.io", description="Upstash Redis REST URL")
+    UPSTASH_REDIS_REST_TOKEN: str = Field("", description="Upstash Redis REST Token")
+    
     LOG_LEVEL: str = Field("INFO", description="Log level (DEBUG, INFO, WARNING, ERROR)")
     CLOUDFLARE_WORKER_URL: str = Field("http://localhost:8787", description="Cloudflare Worker URL for image generation and summaries")
     GLOBAL_REDUCE_ENABLED: bool = Field(True, description="Run a holistic LLM reduce pass over merged chunks to capture cross-file relationships")
@@ -39,7 +48,7 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
-for field_name in settings.model_fields:
+for field_name in Settings.model_fields:
     val = getattr(settings, field_name)
     if isinstance(val, str):
         setattr(settings, field_name, val.lstrip("\ufeff").strip())

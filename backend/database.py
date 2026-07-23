@@ -4,7 +4,10 @@ import json
 import logging
 import sqlite3
 import aiosqlite
-import asyncpg
+try:
+    import asyncpg
+except ImportError:
+    asyncpg = None
 from backend.config import settings
 
 logger = logging.getLogger("capsule.database")

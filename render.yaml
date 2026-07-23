@@ -7,9 +7,22 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: "3.12.0"
+      - key: API_KEY
+        sync: false
+      - key: GITHUB_TOKEN
+        sync: false
+      - key: GITHUB_WEBHOOK_SECRET
+        sync: false
+      - key: NVIDIA_NIM_API_KEY
+        sync: false
+      - key: QSTASH_TOKEN
+        sync: false
+      - key: QSTASH_URL
+        value: "https://qstash-us-east-1.upstash.io"
       - key: REDIS_URL
         sync: false
       - key: DATABASE_URL
         sync: false
+
 
 

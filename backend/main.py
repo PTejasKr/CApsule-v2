@@ -48,6 +48,11 @@ app = FastAPI(
     openapi_url=_openapi_url,
 )
 
+from starlette.middleware.base import BaseHTTPMiddleware
+from fastapi.responses import JSONResponse
+from fastapi import Request
+from backend.middleware.rate_limiter import RateLimiterMiddleware
+
 ALLOWED_ORIGINS = [
     "https://capsule-opal-nine.vercel.app",
     "chrome-extension://",  # Chrome extension origins are validated by API key
@@ -60,11 +65,33 @@ app.add_middleware(
     allow_headers=["X-API-Key", "Content-Type", "Authorization", "x-hub-signature-256"],
 )
 
+# Enterprise Security Headers Middleware
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        return response
+
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(RateLimiterMiddleware, requests_per_minute=120)
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Unhandled Exception on {request.method} {request.url.path}: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "An internal server error occurred.", "status": "error"}
+    )
+
 from backend.middleware.security import verify_github_signature
 from fastapi import Depends
 
 app.include_router(auth.router, prefix="/api")
 app.include_router(webhooks.router, prefix="/api")
+app.include_router(webhooks.router)
 app.include_router(api.router, prefix="/api")
 app.include_router(profiles.router, prefix="/api")
 
@@ -75,6 +102,7 @@ def read_root():
     return {
         "project": "Capsule",
         "status": "operational",
+        "version": "1.0.0",
     }
 
 
