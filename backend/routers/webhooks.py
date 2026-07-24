@@ -157,9 +157,8 @@ async def github_webhook(request: Request, response: Response, background_tasks:
                     gh_svc = GitHubService(token=p_row["github_token"]) if p_row and p_row.get("github_token") else github_service
                     changelog_svc = changelog_service if _is_mocked(changelog_service) else ChangelogService(gh_svc)
                     
-                    target_repo = p_row["changelog_repo"] if p_row and p_row.get("changelog_repo") else settings.CHANGELOG_REPO
-                    
-                    push_task = changelog_svc.push_changelog(changelog_entry, target_repo=target_repo)
+                    target_repo = p_row["changelog_repo"] if p_row and p_row.get("changelog_repo") else None
+                    push_task = changelog_svc.push_changelog(changelog_entry, target_repo) if target_repo else changelog_svc.push_changelog(changelog_entry)
                     push_res = await push_task if hasattr(push_task, "__await__") else push_task
                     return {"status": "changelog_pushed", "version": getattr(changelog_entry, "version", "v1.0.0"), "push_result": push_res}
 

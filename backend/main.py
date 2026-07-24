@@ -97,12 +97,44 @@ app.include_router(profiles.router, prefix="/api")
 
 app.post("/api/webhook/github", status_code=200, dependencies=[Depends(verify_github_signature)])(webhooks.github_webhook)
 
+from fastapi.responses import HTMLResponse, FileResponse
+
+@app.get("/admin", response_class=HTMLResponse)
+def get_admin_page():
+    options_html = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "extension", "options", "options.html")
+    if os.path.exists(options_html):
+        with open(options_html, "r", encoding="utf-8") as f:
+            html = f.read()
+            polyfill = """<script>
+if (typeof chrome === "undefined" || !chrome.storage) {
+  window.chrome = window.chrome || {};
+  window.chrome.storage = {
+    local: {
+      get: (keys) => Promise.resolve((Array.isArray(keys) ? keys : [keys]).reduce((a, k) => { a[k] = localStorage.getItem(k) || ""; return a; }, {})),
+      set: (obj) => { Object.entries(obj).forEach(([k, v]) => localStorage.setItem(k, v)); return Promise.resolve(); }
+    }
+  };
+}
+</script>"""
+            html = html.replace('<head>', '<head>\n' + polyfill)
+            html = html.replace('src="options.js"', 'src="/admin/options.js"')
+            return HTMLResponse(content=html)
+    return HTMLResponse("<h2>Super Admin Dashboard Not Found</h2>", status_code=404)
+
+@app.get("/admin/options.js")
+def get_admin_js():
+    options_js = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "extension", "options", "options.js")
+    if os.path.exists(options_js):
+        return FileResponse(options_js, media_type="application/javascript")
+    return HTMLResponse("// options.js not found", status_code=404)
+
 @app.get("/")
 def read_root():
     return {
         "project": "Capsule",
         "status": "operational",
         "version": "1.0.0",
+        "admin_dashboard": "/admin"
     }
 
 
