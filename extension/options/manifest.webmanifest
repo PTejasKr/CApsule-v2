@@ -1,0 +1,17 @@
+{
+  "name": "Capsule Super Admin Dashboard",
+  "short_name": "Capsule",
+  "description": "AI-Powered PR Analyzer & Release Manager Dashboard",
+  "start_url": "/admin",
+  "display": "standalone",
+  "background_color": "#FFFFF0",
+  "theme_color": "#d95f02",
+  "icons": [
+    {
+      "src": "/admin/icon128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

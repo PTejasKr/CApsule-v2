@@ -105,7 +105,13 @@ def get_admin_page():
     if os.path.exists(options_html):
         with open(options_html, "r", encoding="utf-8") as f:
             html = f.read()
-            polyfill = """<script>
+            polyfill = """<link rel="manifest" href="/admin/manifest.webmanifest">
+<meta name="theme-color" content="#d95f02">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Capsule">
+<link rel="apple-touch-icon" href="/admin/icon128.png">
+<script>
 if (typeof chrome === "undefined" || !chrome.storage) {
   window.chrome = window.chrome || {};
   window.chrome.storage = {
@@ -114,6 +120,13 @@ if (typeof chrome === "undefined" || !chrome.storage) {
       set: (obj) => { Object.entries(obj).forEach(([k, v]) => localStorage.setItem(k, v)); return Promise.resolve(); }
     }
   };
+}
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/admin/sw.js')
+      .then(reg => console.log('Capsule PWA ServiceWorker registered:', reg.scope))
+      .catch(err => console.log('Capsule PWA ServiceWorker registration error:', err));
+  });
 }
 </script>"""
             html = html.replace('<head>', '<head>\n' + polyfill)
@@ -127,6 +140,27 @@ def get_admin_js():
     if os.path.exists(options_js):
         return FileResponse(options_js, media_type="application/javascript")
     return HTMLResponse("// options.js not found", status_code=404)
+
+@app.get("/admin/manifest.webmanifest")
+def get_admin_manifest():
+    manifest_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "extension", "options", "manifest.webmanifest")
+    if os.path.exists(manifest_path):
+        return FileResponse(manifest_path, media_type="application/manifest+json")
+    return JSONResponse({}, status_code=404)
+
+@app.get("/admin/sw.js")
+def get_admin_sw():
+    sw_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "extension", "options", "sw.js")
+    if os.path.exists(sw_path):
+        return FileResponse(sw_path, media_type="application/javascript")
+    return HTMLResponse("// sw.js not found", status_code=404)
+
+@app.get("/admin/icon128.png")
+def get_admin_icon():
+    icon_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "extension", "icons", "icon128.png")
+    if os.path.exists(icon_path):
+        return FileResponse(icon_path, media_type="image/png")
+    return HTMLResponse("Icon not found", status_code=404)
 
 @app.get("/")
 def read_root():
