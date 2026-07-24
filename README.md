@@ -25,12 +25,17 @@ What does Capsule actually do?
 
 ---
 
-## 📋 Quick Links
+## 📋 Quick Links & Live Deployments
 
-- [Setup Instructions](#-setup--step-by-step) - Get it running in 15 minutes
-- [How Multi-Repo Works](#how-multi-repo-orchestration-works) - For teams managing multiple codebases
-- [Architecture](#architecture) - The boring but important stuff
-- [Troubleshooting](#troubleshooting) - When things go wrong
+* 🌐 **Live Web App**: [https://capsule-opal-nine.vercel.app](https://capsule-opal-nine.vercel.app)
+* 🚀 **Render API Backend**: [https://capsule-backend-d1fp.onrender.com](https://capsule-backend-d1fp.onrender.com)
+* ⚓ **GitHub Webhook Endpoint**: `https://capsule-backend-d1fp.onrender.com/api/webhooks/github`
+* ⚡ **QStash Handler Endpoint**: `https://capsule-backend-d1fp.onrender.com/api/webhooks/qstash-handler`
+* ⚙️ **Jenkins Trigger Endpoint**: `https://capsule-backend-d1fp.onrender.com/api/webhooks/jenkins`
+* 📖 [Setup Instructions](#-setup--step-by-step) - Get it running in 15 minutes
+* 🔀 [How Multi-Repo Works](#how-multi-repo-orchestration-works) - For teams managing multiple codebases
+* 🏗️ [Architecture](#architecture) - System design & flow
+* 🛠️ [Troubleshooting](#troubleshooting) - Common fixes & solutions
 
 ---
 
