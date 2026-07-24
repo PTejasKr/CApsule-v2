@@ -1,8 +1,6 @@
 pipeline {
     agent any
 
-// Removed GenericTrigger: Multibranch pipeline will handle PR events via built-in variables.
-
     environment {
         // Configure Capsule backend parameters (Production Render URL)
         CAPSULE_API_URL = 'https://capsule-backend-d1fp.onrender.com'
