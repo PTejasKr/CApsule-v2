@@ -4,6 +4,7 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-green?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![Docker](https://img.shields.io/badge/Docker-Enabled-blue?logo=docker&logoColor=white)](https://www.docker.com/)
 [![License](https://img.shields.io/badge/License-MIT-purple)](LICENSE)
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/PTejasKr/CApsule-v2)
 
 **Capsule** is an AI-powered CI/CD companion that watches your pull requests, checks them against your Business Requirements, spots risky changes, and auto-publishes versioned changelogs. Think of [...](https://github.com/PTejasKr/CApsule-v2#quick-overview)
 
