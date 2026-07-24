@@ -1,725 +1,295 @@
-# Capsule 🛡️
+# Capsule 🛡️ — AI-Powered PR Analyzer & Automated Changelog Engine
 
 [![Python](https://img.shields.io/badge/Python-3.12-blue?logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-green?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![Docker](https://img.shields.io/badge/Docker-Enabled-blue?logo=docker&logoColor=white)](https://www.docker.com/)
+[![PWA](https://img.shields.io/badge/PWA-Enabled-orange?logo=pwa&logoColor=white)](https://capsule-backend-d1fp.onrender.com/admin)
 [![License](https://img.shields.io/badge/License-MIT-purple)](LICENSE)
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/PTejasKr/CApsule-v2)
 
-**Capsule** is an AI-powered CI/CD companion that watches your pull requests, checks them against your Business Requirements, spots risky changes, and auto-publishes versioned changelogs. Think of [...](https://github.com/PTejasKr/CApsule-v2#quick-overview)
+> **"Why did we build this?"**  
+> As engineers, we were tired of three things: spending hours writing release notes before every deploy, catching breaking architectural changes at 11 PM on a Friday, and trying to figure out which PR broke a business requirement written six months ago.  
+>  
+> **Capsule** solves this. It sits silently in your CI/CD pipeline and browser. Whenever a Pull Request is opened, Capsule reads the code diff, checks it against your actual **Business Requirement Document (BRD)**, warns you if critical workflows are at risk, and automatically writes & publishes versioned release notes when you merge.
 
 ---
 
-## Quick Overview
+## 🌐 Live Deployments & Quick Links
 
-What does Capsule actually do?
-
-1. **Watches GitHub PRs** → Gets notified when you open a PR
-2. **Reads your Business Rules** → Loads your BRD document to understand what matters
-3. **Analyzes code changes** → Uses AI to understand what changed and why
-4. **Checks for violations** → Makes sure nothing breaks your critical workflows
-5. **Generates summaries** → Creates a human-readable summary in your PR
-6. **Auto-versions releases** → Bumps version numbers automatically (MAJOR, MINOR, PATCH)
-7. **Pushes changelogs** → Commits versioned changelog entries to your release repo
-
-**End result**: Your team spends less time writing release notes and more time shipping code.
+| Service / Tool | URL | Description |
+| :--- | :--- | :--- |
+| 👑 **Super Admin Dashboard (PWA)** | [capsule-backend-d1fp.onrender.com/admin](https://capsule-backend-d1fp.onrender.com/admin) | Full PWA web app — installable on mobile & desktop |
+| 🚀 **Render API Server** | [capsule-backend-d1fp.onrender.com](https://capsule-backend-d1fp.onrender.com) | Live backend API (FastAPI + Upstash QStash) |
+| 🌐 **Vercel Serverless Endpoint** | [capsule-opal-nine.vercel.app](https://capsule-opal-nine.vercel.app) | Backup serverless API function |
+| 📦 **GitHub Repository** | [github.com/PTejasKr/CApsule-v2](https://github.com/PTejasKr/CApsule-v2) | Source code, blueprints, and releases |
+| ⚓ **GitHub Webhook Endpoint** | `https://capsule-backend-d1fp.onrender.com/api/webhooks/github` | Webhook target for GitHub PR events |
+| ⚙️ **Jenkins Webhook Endpoint** | `https://capsule-backend-d1fp.onrender.com/api/webhooks/jenkins` | API target for Jenkins CI/CD jobs |
 
 ---
 
-## 📋 Quick Links & Live Deployments
+## 💡 How Capsule Works (In Plain English)
 
-* 🌐 **Live Web App**: [https://capsule-opal-nine.vercel.app](https://capsule-opal-nine.vercel.app)
-* 🚀 **Render API Backend**: [https://capsule-backend-d1fp.onrender.com](https://capsule-backend-d1fp.onrender.com)
-* ⚓ **GitHub Webhook Endpoint**: `https://capsule-backend-d1fp.onrender.com/api/webhooks/github`
-* ⚡ **QStash Handler Endpoint**: `https://capsule-backend-d1fp.onrender.com/api/webhooks/qstash-handler`
-* ⚙️ **Jenkins Trigger Endpoint**: `https://capsule-backend-d1fp.onrender.com/api/webhooks/jenkins`
-* 📖 [Setup Instructions](#-setup--step-by-step) - Get it running in 15 minutes
-* 🔀 [How Multi-Repo Works](#how-multi-repo-orchestration-works) - For teams managing multiple codebases
-* 🏗️ [Architecture](#architecture) - System design & flow
-* 🛠️ [Troubleshooting](#troubleshooting) - Common fixes & solutions
+```
+1. You open a PR on GitHub ──> 2. Webhook triggers QStash ──> 3. Capsule reads your BRD rules
+                                                                           │
+                                                                           ▼
+6. Auto-versions release  <── 5. Injects UI in GitHub & PWA <── 4. AI analyzes code diffs & risks
+   & updates changelog.txt
+```
+
+1. **You open a PR**: GitHub sends a lightweight webhook payload to Capsule.
+2. **Serverless Queue (Zero-Cost)**: Upstash QStash enqueues the job instantly to avoid hanging webhooks.
+3. **BRD Compliance Check**: Capsule loads your business requirements (`requirements.md`) as the ground truth.
+4. **AI Risk Analysis**: NVIDIA NIM (Llama 3.1 70B) reads the diff chunk-by-chunk to spot broken workflows, missing validations, or risky side effects.
+5. **Interactive UI**: The **Chrome Extension** injects a risk badge directly into GitHub, while the **Super Admin PWA** gives your team a central dashboard.
+6. **Automatic SemVer Changelog**: When merged to `main`, Capsule increments `vMAJOR.MINOR.PATCH` and commits formatted release notes to your release repo.
 
 ---
 
-## Architecture
+## 📐 Architecture & Visual Workflows
+
+### 1. End-to-End System Event Architecture
 
 ```mermaid
-%%{init: {'theme': 'dark', 'themeVariables': { 'fontSize': '16px', 'fontFamily': 'arial', 'primaryTextColor':'#ffffff', 'primaryBorderColor':'#cccccc', 'lineColor':'#ffffff', 'secondBkgColor':'#1e1e1e', 'tertiaryTextColor':'#ffffff', 'fontFamily': 'helvetica' }}}%%
-graph TD
-    subgraph GitHub["📦 GitHub"]
-        PR["You open a PR"]
-    end
-    
-    subgraph Jenkins["🔧 Jenkins"]
-        Webhook["Webhook Event"]
-    end
-    
-    subgraph Capsule["🛡️ Capsule Backend"]
-        BRD["Reads Business Rules<br/>from BRD Document"]
-        Analyzer["AI Analyzer<br/>NVIDIA LLM"]
-        Cache["Results Cache<br/>Redis"]
-    end
-    
-    subgraph Output["📝 Output"]
-        PRComment["PR Comment<br/>with Summary"]
-        Changelog["Changelog Entry<br/>in Release Repo"]
-    end
-    
-    PR -->|"GitHub Webhook"| Webhook
-    Webhook -->|"POST /webhooks"| Capsule
-    BRD -.->|"Ground Truth"| Analyzer
-    Analyzer -->|"AI Analysis"| Cache
-    Cache --> PRComment
-    Cache --> Changelog
-    
-    style GitHub fill:#0d47a1,stroke:#ffffff,stroke-width:2px,color:#ffffff
-    style Jenkins fill:#1a5490,stroke:#ffffff,stroke-width:2px,color:#ffffff
-    style Capsule fill:#2d5016,stroke:#ffffff,stroke-width:2px,color:#ffffff
-    style Output fill:#1b5e20,stroke:#ffffff,stroke-width:2px,color:#ffffff
-    style PR fill:#ffffff,stroke:#333,stroke-width:2px,color:#000000
-    style Webhook fill:#ffffff,stroke:#333,stroke-width:2px,color:#000000
-    style BRD fill:#ffffff,stroke:#333,stroke-width:2px,color:#000000
-    style Analyzer fill:#ffffff,stroke:#333,stroke-width:2px,color:#000000
-    style Cache fill:#ffffff,stroke:#333,stroke-width:2px,color:#000000
-    style PRComment fill:#ffffff,stroke:#333,stroke-width:2px,color:#000000
-    style Changelog fill:#ffffff,stroke:#333,stroke-width:2px,color:#000000
-```
+%%{init: {'theme': 'dark', 'themeVariables': { 'fontSize': '15px', 'fontFamily': 'inter', 'primaryTextColor':'#ffffff', 'lineColor':'#f39c12' }}}%%
+sequenceDiagram
+    autonumber
+    actor Dev as Developer / CI
+    participant GH as 📦 GitHub
+    participant QS as ⚡ Upstash QStash
+    participant API as 🛡️ Capsule Backend (Render)
+    participant AI as 🧠 AI Engine (NVIDIA NIM)
+    participant DB as 💾 SQLite / PostgreSQL
+    participant UI as 🎨 Chrome Ext & PWA Dashboard
 
-**Flow in human terms:**
-> Your GitHub webhook triggers Jenkins → Jenkins tells Capsule → Capsule loads your business rules → AI analyzes the PR diff → Results are cached → Chrome extension shows summary → On [...]
+    Dev->>GH: Opens / Updates Pull Request
+    GH->>API: Webhook (POST /api/webhooks/github)
+    API->>QS: Dispatch Async Task (HTTP Publish)
+    QS->>API: Trigger Webhook Handler (/api/webhooks/qstash-handler)
+    API->>DB: Fetch Profile & Repository Mappings
+    API->>AI: Analyze Diffs against BRD (Llama 3.1 70B)
+    AI-->>API: Structured Summary + Workflow Impact JSON
+    API->>DB: Store PR Analysis Record
+    API-->>UI: Real-time Badge & Dashboard Update
+    
+    opt On Merge to Main
+        Dev->>GH: Merges PR to Main Branch
+        GH->>API: Webhook (action=closed, merged=true)
+        API->>AI: Generate Increment Versioned Changelog
+        API->>GH: Commit & Push updated changelog.txt to Release Repo
+    end
+```
 
 ---
 
-## Key Features
+### 2. Multi-Repo Orchestration Architecture
 
-### 🤖 AI-Powered Code Analysis
-- Reads diffs and explains what changed in plain English
-- Uses NVIDIA's Llama 3.1 70B model (enterprise-grade accuracy)
-- Detects patterns your BRD cares about
-
-### ✅ Business Rule Checking
-- Compares code changes against your BRD
-- Warns if a PR modifies critical workflows
-- Prevents rule violations from shipping
-
-### 🛡️ Anti-Hallucination Layer
-- 8-layer validation system ensures AI doesn't make stuff up
-- Physical file validation checks
-- Low temperature inference (0.1) for consistency
-- Confidence scoring on all findings
-
-### 📦 Smart Versioning
-- **MAJOR**: When workflow logic changes
-- **MINOR**: When features are added
-- **PATCH**: When bugs are fixed
-- Automatic SemVer bumping on each merge
-
-### 🎨 Floating Dashboard
-- Chrome extension injects a side panel in GitHub
-- No styling conflicts (Shadow DOM isolated)
-- Shows summaries without page reload
-- **Admin Console**: Edit generated summaries, trigger auto-repairs, compare summaries, and approve/reject directly from the UI
-
-### 🛠️ Capsule Multi-Agent Loop
-- Multi-agent orchestration loop (`Architect`, `Coder`, and `Debugger` modes)
-- Automatic verification and self-healing loop with up to 2 code repair attempts
-- Automatic branch patching and commit pushes on successful verification
-
-### 🚀 Jenkins Integration
-- Multibranch pipeline ready
-- Analyzes PRs before merge
-- Auto-publishes on merge to main
-
----
-
-## Tech Stack (What's Under the Hood)
-
-| What | Technology | Why |
-|-----|-----------|-----|
-| **API** | FastAPI | Fast, async, great for webhooks |
-| **Database** | SQLite (Stub) / PostgreSQL + AsyncPG | Flexible persistence options |
-| **Cache** | Redis | Lightning-fast result caching |
-| **Task Queue** | Celery | Handles long-running PR analysis in background |
-| **AI Model** | NVIDIA NIM, Gemini, Groq, OpenRouter, Ollama | Multi-provider AI compatibility |
-| **Frontend** | Vanilla JS + Shadow DOM | Works everywhere, no dependencies |
-| **CI/CD** | Jenkins + Multibranch Pipeline | Standard enterprise setup |
-| **Container** | Docker Compose | Everything in one `docker-compose up` |
-| **Reverse Proxy** | Nginx | Load balancing, SSL termination |
-
----
-
-## How Multi-Repo Orchestration Works
-
-Running multiple projects? Capsule can analyze PRs from all of them and consolidate everything into one changelog.
-
-### The Setup
-
-```
-Your Organization
-├── app-backend (monitored)
-├── app-frontend (monitored)
-├── app-shared (monitored)
-└── releases (central changelog destination)
-```
-
-### What Happens
+Capsule allows you to monitor multiple microservices (`frontend`, `backend`, `shared-lib`) and aggregate all changelogs into a single release branch.
 
 ```mermaid
-%%{init: {'theme': 'dark', 'themeVariables': { 'fontSize': '16px', 'fontFamily': 'arial', 'primaryTextColor':'#ffffff', 'primaryBorderColor':'#cccccc', 'lineColor':'#ffffff', 'secondBkgColor':'#1e1e1e', 'tertiaryTextColor':'#ffffff', 'fontFamily': 'helvetica' }}}%%
+%%{init: {'theme': 'dark', 'themeVariables': { 'fontSize': '15px', 'fontFamily': 'inter' }}}%%
 graph LR
-    Repo1["📱 Frontend Repo<br/>PR #42 Opened"]
-    Repo2["⚙️ Backend Repo<br/>PR #88 Opened"]
-    Repo3["📚 Shared Repo<br/>PR #15 Opened"]
+    subgraph Source Code Repositories
+        R1["📱 app-frontend<br/>PR #42"]
+        R2["⚙️ app-backend<br/>PR #88"]
+        R3["📚 shared-utils<br/>PR #19"]
+    end
+
+    subgraph Capsule Core Processing
+        W["🛡️ Capsule Multi-Tenant API<br/>(Render Free Tier)"]
+        BRD["📄 Central BRD Ground Truth<br/>(requirements.md)"]
+        AI["🧠 LLM Parallel Chunking"]
+    end
+
+    subgraph Output Destinations
+        CR["📦 Central Releases Repo<br/>(changelog.txt / release-v1.4.0)"]
+        EXT["🎨 In-Page GitHub Extension"]
+        PWA["👑 Super Admin PWA Dashboard"]
+    end
+
+    R1 -->|PR Webhook| W
+    R2 -->|PR Webhook| W
+    R3 -->|PR Webhook| W
     
-    Webhook1["Webhook Event"]
-    Webhook2["Webhook Event"]
-    Webhook3["Webhook Event"]
+    BRD -.->|Rules Engine| W
+    W <--> AI
     
-    Jenkins["Jenkins Pipeline<br/>Processes All PRs"]
-    Capsule["Capsule Backend<br/>Analyzes Each PR<br/>Against Same BRD"]
-    
-    Cache["Analysis Cache<br/>Redis"]
-    
-    Release["Release Repo<br/>Single changelog.txt"]
-    
-    Repo1 -->|"PR opened/updated"| Webhook1
-    Repo2 -->|"PR opened/updated"| Webhook2
-    Repo3 -->|"PR opened/updated"| Webhook3
-    
-    Webhook1 --> Jenkins
-    Webhook2 --> Jenkins
-    Webhook3 --> Jenkins
-    
-    Jenkins -->|"Analyze PR #42"| Capsule
-    Jenkins -->|"Analyze PR #88"| Capsule
-    Jenkins -->|"Analyze PR #15"| Capsule
-    
-    Capsule -->|"Store results"| Cache
-    
-    Cache -->|"On merge to main"| Release
-    
-    style Repo1 fill:#0d47a1,stroke:#ffffff,stroke-width:2px,color:#ffffff
-    style Repo2 fill:#0d47a1,stroke:#ffffff,stroke-width:2px,color:#ffffff
-    style Repo3 fill:#0d47a1,stroke:#ffffff,stroke-width:2px,color:#ffffff
-    style Webhook1 fill:#ffffff,stroke:#333,stroke-width:2px,color:#000000
-    style Webhook2 fill:#ffffff,stroke:#333,stroke-width:2px,color:#000000
-    style Webhook3 fill:#ffffff,stroke:#333,stroke-width:2px,color:#000000
-    style Jenkins fill:#1a5490,stroke:#ffffff,stroke-width:2px,color:#ffffff
-    style Capsule fill:#2d5016,stroke:#ffffff,stroke-width:2px,color:#ffffff
-    style Cache fill:#ffffff,stroke:#333,stroke-width:2px,color:#000000
-    style Release fill:#1b5e20,stroke:#ffffff,stroke-width:2px,color:#ffffff
+    W -->|Push SemVer| CR
+    W -->|Live UI| EXT
+    W -->|Admin App| PWA
+
+    style R1 fill:#1e3a8a,stroke:#3b82f6,color:#fff
+    style R2 fill:#1e3a8a,stroke:#3b82f6,color:#fff
+    style R3 fill:#1e3a8a,stroke:#3b82f6,color:#fff
+    style W fill:#14532d,stroke:#22c55e,color:#fff
+    style BRD fill:#7c2d12,stroke:#f97316,color:#fff
+    style CR fill:#581c87,stroke:#a855f7,color:#fff
 ```
-
-### Real Example: Multi-Repo Changelog
-
-When PRs from multiple repos get merged:
-
-```
-# Changelog v1.2.3
-
-## Frontend (PR #42)
-- Added dark mode toggle to user dashboard
-- Fixed mobile responsive layout on tablet devices
-- IMPACT: MINOR (feature addition)
-
-## Backend (PR #88)
-- Migrated authentication from JWT to OAuth 2.0
-- Updated database schema for user profiles
-- IMPACT: MAJOR (workflow change - review required!)
-
-## Shared Library (PR #15)
-- Fixed memory leak in cache utility function
-- Updated TypeScript definitions
-- IMPACT: PATCH (bug fix)
-```
-
-All in **one file**, **one version number**, **from three different repos**.
 
 ---
 
-## ⚡ Setup & Step-by-Step
+### 3. Anti-Hallucination & Self-Healing Loop
 
-### Before You Start
+To ensure AI doesn't invent non-existent file changes or hallucinate breaking risks, Capsule runs an 8-layer verification pipeline:
 
-Make sure you have:
-- Docker & Docker Compose installed
-- A GitHub account with a repo
-- 15 minutes of free time
-- Your brain ready to copy-paste commands (jokes aside, this is straightforward)
+```mermaid
+%%{init: {'theme': 'dark', 'themeVariables': { 'fontSize': '15px' }}}%%
+graph TD
+    A["Raw PR Diff Input"] --> B["1. Unified Diff Parser"]
+    B --> C["2. Line Range & File Validator"]
+    C --> D["3. NVIDIA NIM Llama 3.1 Inference"]
+    D --> E{"4. Schema & JSON Validation"}
+    E -- Invalid --> F["5. Self-Healing Loop (Max 2 Attempts)"]
+    F --> D
+    E -- Valid --> G["6. Anti-Prompt-Injection Sanitizer"]
+    G --> H["7. Confidence Scoring Engine"]
+    H --> I{"Score >= 0.70?"}
+    I -- No --> J["Flag for Manual Admin Approval"]
+    I -- Yes --> K["Auto-Approve & Cache Result"]
 
-### Step 1: Clone and Configure
+    style A fill:#334155,color:#fff
+    style D fill:#1e3a8a,color:#fff
+    style F fill:#991b1b,color:#fff
+    style K fill:#14532d,color:#fff
+```
+
+---
+
+## 🗄️ Database Schemas & Data Models
+
+Capsule uses an asynchronous database layer (`sqlite+aiosqlite` for local dev / `asyncpg` for PostgreSQL in production). Here are the exact database tables:
+
+### 1. `pr_analyses` Table
+Stores AI analysis results, risk scores, and workflow impact evaluations for every pull request.
+
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | `INTEGER` / `SERIAL` | `PRIMARY KEY` | Unique analysis record ID |
+| `pr_number` | `INTEGER` | `NOT NULL` | GitHub Pull Request number |
+| `repo` | `VARCHAR(255)` | `NOT NULL` | Repository name (`owner/repo`) |
+| `title` | `TEXT` | `NOT NULL` | Pull Request title |
+| `summary` | `TEXT` | `NOT NULL` | Plain-English summary generated by AI |
+| `changes_json` | `TEXT` / `JSONB` | `NOT NULL` | Array of modified files, line ranges, and change types |
+| `workflow_impact_json` | `TEXT` / `JSONB` | `NOT NULL` | Affected workflows, severity (`MAJOR`, `MINOR`, `NONE`), before/after state |
+| `confidence_score` | `FLOAT` | `DEFAULT 1.0` | AI verification confidence score (0.0 to 1.0) |
+| `created_at` | `TIMESTAMP` | `DEFAULT CURRENT_TIMESTAMP` | Analysis creation timestamp |
+
+### 2. `profiles` Table
+Manages organization settings, API credentials, and default LLM engine configurations.
+
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | `INTEGER` / `SERIAL` | `PRIMARY KEY` | Profile ID |
+| `name` | `VARCHAR(100)` | `NOT NULL` | Profile / Team Name |
+| `github_token` | `TEXT` | `NOT NULL` | GitHub Personal Access Token (encrypted/stored) |
+| `changelog_repo` | `VARCHAR(255)` | `NOT NULL` | Target repository where `changelog.txt` is pushed |
+| `ai_provider` | `VARCHAR(50)` | `DEFAULT 'nvidia'` | AI Provider (`nvidia`, `gemini`, `groq`, `ollama`) |
+| `created_at` | `TIMESTAMP` | `DEFAULT CURRENT_TIMESTAMP` | Profile creation timestamp |
+
+### 3. `repository_mappings` Table
+Maps source GitHub repositories to specific Capsule profiles and custom BRD files.
+
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | `INTEGER` / `SERIAL` | `PRIMARY KEY` | Mapping ID |
+| `profile_id` | `INTEGER` | `FOREIGN KEY` | References `profiles(id)` |
+| `source_repo` | `VARCHAR(255)` | `NOT NULL, UNIQUE` | Source GitHub repository (`owner/repo`) |
+| `brd_path` | `TEXT` | `DEFAULT './brd/requirements.md'` | Path or reference to business rules document |
+
+---
+
+## 🛠️ API Endpoint Reference Map
+
+| Method | Endpoint | Access | Purpose |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/` | Public | System status and service health check |
+| `GET` | `/admin` | Public | **Super Admin Dashboard (PWA)** web app |
+| `POST` | `/api/webhooks/github` | HMAC Verified | Primary GitHub PR webhook listener |
+| `POST` | `/api/webhooks/qstash-handler` | QStash Signed | Async task execution queue listener |
+| `POST` | `/api/webhooks/jenkins` | `X-API-Key` | Explicit trigger endpoint for Jenkins CI/CD pipelines |
+| `GET` | `/api/pr/{pr_number}` | `X-API-Key` | Retrieve stored analysis for a specific PR |
+| `POST` | `/api/pr/{pr_number}/repair` | `X-API-Key` | Trigger self-healing AI repair loop on a PR summary |
+| `POST` | `/api/pr/{pr_number}/approve` | `X-API-Key` | Admin approval for PR analysis and manual changelog push |
+| `GET` | `/api/profiles` | `X-API-Key` | List all configured profiles and repository mappings |
+| `POST` | `/api/auth/github/callback` | Public | GitHub OAuth authentication flow |
+
+---
+
+## ⚙️ Environment Variables Reference (`.env`)
+
+| Variable | Required? | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `API_KEY` | **Yes** | — | Master API Key for Extension, PWA, and Jenkins auth |
+| `GITHUB_TOKEN` | **Yes** | — | GitHub Personal Access Token with `repo` and `webhook` scope |
+| `GITHUB_WEBHOOK_SECRET` | **Yes** | — | Secret string for HMAC SHA-256 webhook validation |
+| `CHANGELOG_REPO` | **Yes** | — | Target repository (`owner/repo`) for changelog commits |
+| `NVIDIA_NIM_API_KEY` | **Yes** | — | NVIDIA NIM LLM API key (`nvapi-...`) |
+| `NVIDIA_NIM_MODEL` | No | `meta/llama-3.1-70b-instruct` | LLM model name |
+| `QSTASH_URL` | No | `https://qstash-us-east-1.upstash.io` | Upstash QStash URL |
+| `QSTASH_TOKEN` | No | — | Upstash QStash Token for async queueing |
+| `UPSTASH_REDIS_REST_URL` | No | `https://rational-buck-119535.upstash.io` | Upstash Redis REST URL |
+| `UPSTASH_REDIS_REST_TOKEN` | No | — | Upstash Redis REST Token |
+| `DATABASE_URL` | No | `sqlite+aiosqlite:///./data/capsule.db` | Async database connection URL |
+| `LOG_LEVEL` | No | `INFO` | Logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`) |
+
+---
+
+## ⚡ Quick Setup Guide
+
+### Option A: 1-Click Cloud Deployment (Render)
+
+Click the button below to deploy your own free-tier instance on Render:
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/PTejasKr/CApsule-v2)
+
+*Render will automatically detect `render.yaml`, set up Python 3.12, install dependencies, and prompt for your `.env` secrets.*
+
+---
+
+### Option B: Local Setup (Docker or Python)
 
 ```bash
-# Clone the repo
-git clone https://github.com/PTejasKr/Capsule.git
-cd Capsule
+# 1. Clone the repository
+git clone https://github.com/PTejasKr/CApsule-v2.git
+cd CApsule-v2
 
-# Copy the example env file
+# 2. Copy the example environment file
 cp .env.example .env
 
-# Open .env in your editor
-nano .env  # or vim, or your favorite editor
-```
+# 3. Fill in your API_KEY, GITHUB_TOKEN, and NVIDIA_NIM_API_KEY in .env
 
-### Step 2: Get Your API Keys
-
-You need 3 keys. Go grab them:
-
-#### 🔑 GitHub Token
-
-1. Go to GitHub → Settings → Developer Settings → Personal Access Tokens (classic)
-2. Click "Generate new token"
-3. Name it `Capsule` or something memorable
-4. Check these boxes:
-   - ✅ `repo` (full control of repos)
-   - ✅ `workflow` (update workflows)
-   - ✅ `admin:repo_hook` (manage webhooks)
-5. Generate and copy the token (you'll only see it once!)
-6. Paste in `.env`:
-   ```
-   GITHUB_TOKEN=ghp_your_token_here
-   ```
-
-#### 🔐 Webhook Secret
-
-Generate a random string (the system will use this to verify GitHub really sent the webhook):
-
-```bash
-# Mac/Linux
-python3 -c "import secrets; print(secrets.token_hex(32))"
-
-# Or just make one up (boring but works)
-# Example: ab12cd34ef56gh78ij90kl12mn34op56
-```
-
-Paste in `.env`:
-```
-GITHUB_WEBHOOK_SECRET=your_random_string_here
-```
-
-#### 🚀 NVIDIA NIM API Key
-
-1. Sign up at [NVIDIA NGC](https://ngc.nvidia.com)
-2. Go to API Keys section
-3. Generate a new key (starts with `nvapi-`)
-4. Copy it to `.env`:
-   ```
-   NVIDIA_NIM_API_KEY=nvapi_your_key_here
-   ```
-
-#### 🔐 API Key for Chrome Extension
-
-This is just a random string that the extension uses to authenticate:
-
-```bash
-# Generate one
-python3 -c "import secrets; print(secrets.token_urlsafe(32))"
-
-# Example: KX5vJ8qWpZlM2nR9sT6uVwXyZa1bCdEf
-```
-
-Paste in `.env`:
-```
-API_KEY=your_generated_key_here
-```
-
-### Step 3: Set Your Release Repository
-
-This is where Capsule will push changelog updates. You can configure this in two ways:
-
-#### Option A: Single-Repository Setup (Simple)
-If you want to keep release logs in the same repository as your codebase, set `CHANGELOG_REPO` to the name of your main code repository:
-```env
-CHANGELOG_REPO=your-github-username/capsule
-```
-*   **How it works:** Capsule will create and commit all release logs, summaries, and workflow diagrams to an isolated, separate `changelog` branch inside the same repository.
-
-#### Option B: Multi-Repository Setup (Consolidated)
-If you manage multiple repositories and want a single, centralized release repository where changelogs from all projects are compiled:
-```env
-CHANGELOG_REPO=your-github-username/centralized-releases
-```
-*   **How it works:** Capsule will push release updates from all monitored repositories to the `changelog` branch of this dedicated releases repository.
-
-*(Note: The target repository must exist on GitHub, but you do not need to create the `changelog` branch manually. Capsule will check for it and auto-create it if it is missing).*
-
-### Step 4: Your Business Rules Document
-
-This file tells Capsule what your business cares about:
-
-Create a file: `./brd/requirements.md`
-
-```markdown
-# Business Requirements Document
-
-## Critical Workflows
-- **Authentication**: Must use OAuth 2.0 with 2FA enabled
-- **Payments**: Must integrate with Stripe (no custom payment logic)
-- **Data Storage**: All PII must be encrypted with AES-256
-
-## Code Standards
-- Backend: FastAPI only (no Django, no Flask)
-- Frontend: React 18+
-- Database: PostgreSQL (no MongoDB)
-
-## Approval Rules
-- Changes to auth flow: Require security review
-- Database schema changes: Require DBA approval
-- Third-party integrations: Require CTO sign-off
-
-## What NOT to do
-- Don't remove Sentry error tracking
-- Don't disable API rate limiting
-- Don't add hardcoded credentials
-```
-
-Capsule will read this and warn if a PR violates any rules.
-
-### Step 5: Start the Containers
-
-```bash
-# This starts PostgreSQL, Redis, the API, Celery worker, and Nginx
+# 4. Start via Docker Compose
 docker-compose up -d --build
 
-# Watch the startup
-docker-compose logs -f capsule-api-server
-
-# You should see: "Capsule API Service successfully started and ready"
-```
-
-### Step 6: Verify Everything Works
-
-```bash
-# Check if the API is running
-curl http://localhost:8000/api/health
-
-# You should get back:
-# {"status":"healthy","service":"Capsule PR Analyzer","version":"1.0.0"}
-```
-
-### Step 7: Install Chrome Extension
-
-1. Open Chrome
-2. Go to `chrome://extensions/`
-3. Toggle "Developer mode" (top right)
-4. Click "Load unpacked"
-5. Select the `extension` folder in your Capsule directory
-6. Click on the Capsule icon → Settings
-7. Enter:
-   - Backend URL: `https://capsule-backend-d1fp.onrender.com` (or `http://localhost:8000` for local dev)
-   - API Key: (the one from `.env` → `API_KEY`)
-8. Click Save
-
-### Step 8: Set Up Jenkins (Optional but Recommended)
-
-If you're using Jenkins (and most teams are):
-
-1. Go to **Manage Jenkins** → **Manage Credentials**
-2. Add a new credential:
-   - Kind: "Secret text"
-   - Secret: (the API_KEY from your `.env`)
-   - ID: `capsule-api-key`
-3. Click Create
-
-Then, in your GitHub repo:
-1. Settings → Webhooks → Add webhook
-2. Payload URL: `https://capsule-backend-d1fp.onrender.com/api/webhooks/github` (or your Jenkins generic webhook URL)
-3. Content-type: `application/json`
-4. Secret: (your `GITHUB_WEBHOOK_SECRET`)
-5. Trigger: "Let me select individual events" → Check "Pull requests"
-6. Click Add webhook
-
-Finally, view the Jenkinsfile in `jenkins/Jenkinsfile` or copy it to your repo root:
-```bash
-cp jenkins/Jenkinsfile ./Jenkinsfile
+# Or run directly with Python:
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+pip install -r backend/requirements.txt
+uvicorn backend.main:app --reload --port 8000
 ```
 
 ---
 
-## Environment Variables (The Reference)
+### Option C: Chrome Extension & PWA Installation
 
-| Variable | What It Does | Example |
-|----------|------------|---------|
-| `API_KEY` | Chrome extension auth token | `KX5vJ8qWpZlM2nR9sT6uVwXyZa1bCdEf` |
-| `GITHUB_TOKEN` | Authenticate with GitHub API | `ghp_xxxxxxxxxxxx` |
-| `GITHUB_WEBHOOK_SECRET` | Verify GitHub webhooks are legit | `ab12cd34ef56gh78ij90kl12mn34op56` |
-| `CHANGELOG_REPO` | Where to push changelogs | `your-org/releases` |
-| `NVIDIA_NIM_API_KEY` | Access NVIDIA LLM | `nvapi_xxxxxxxxxxxx` |
-| `NVIDIA_NIM_BASE_URL` | NVIDIA API endpoint | `https://integrate.api.nvidia.com/v1` |
-| `NVIDIA_NIM_MODEL` | Which LLM to use | `meta/llama-3.1-70b-instruct` |
-| `DATABASE_URL` | PostgreSQL connection | `postgresql+asyncpg://postgres:postgres@postgres:5432/capsule` |
-| `REDIS_HOST` | Redis cache server | `redis` (in Docker, use service name) |
-| `BRD_FILE_PATH` | Path to your business rules | `./brd/requirements.md` |
-| `LOG_LEVEL` | How verbose the logs are | `INFO` (or `DEBUG` for troubleshooting) |
+1. Open Chrome and navigate to `chrome://extensions`.
+2. Enable **Developer mode** (top right).
+3. Click **Load unpacked** and select the `extension/` folder in this repo.
+4. Click the Capsule toolbar icon ➔ **Settings** ➔ Enter your Backend URL (`https://capsule-backend-d1fp.onrender.com` or `http://localhost:8000`) and your `API_KEY`.
+5. **PWA Mobile/Desktop**: Open `https://capsule-backend-d1fp.onrender.com/admin` in any browser and click *"Add to Home Screen"* / *"Install Capsule"*.
 
 ---
 
-## Testing It Out
+### Option D: Jenkins CI/CD Setup
 
-### Test 1: Create a Test PR
-
-1. Fork the Capsule repo (or create a test repo)
-2. Create a new branch: `git checkout -b test-capsule`
-3. Make a small change (add a comment, update a line)
-4. Push and create a PR
-5. Check the PR page - you should see the Capsule badge
-6. Click it to see the AI analysis
-
-### Test 2: Check Backend Logs
-
-```bash
-docker-compose logs -f capsule-api-server
-```
-
-You should see requests coming in when you open the PR.
-
-### Test 3: Merge and Check Changelog
-
-1. Merge the PR to `main`
-2. Check your release repo - `changelog.txt` should be updated automatically
-3. Version number should be bumped
+1. Copy [`jenkins/Jenkinsfile`](file:///c:/Users/punya/OneDrive/Desktop/capsulev2/capsule/jenkins/Jenkinsfile) to your project root.
+2. In Jenkins, install **Generic Webhook Trigger Plugin** and **HTTP Request Plugin**.
+3. Add a Global Credential named `capsule-api-key` containing your `API_KEY`.
+4. Point your Jenkins Pipeline job to your repo. Capsule will analyze every PR build and publish versioned release notes on merge!
 
 ---
 
-## Common Issues & Fixes
+## 👥 Contributing & License
 
-### "Chrome Extension says 'Connection Failed'"
-
-**Problem**: Extension can't reach the backend.
-
-**Fix**:
-```bash
-# 1. Check if API is running
-curl http://localhost:8000/api/health
-
-# 2. Check the backend URL in extension settings
-# (Should be http://localhost:8000 for local setup)
-
-# 3. Check firewall - port 8000 might be blocked
-sudo lsof -i :8000  # See what's using port 8000
-
-# 4. Restart the API
-docker-compose restart capsule-api-server
-```
-
-### "No Changelog Generated"
-
-**Problem**: You merged a PR but nothing happened.
-
-**Fix**:
-```bash
-# 1. Verify CHANGELOG_REPO is set correctly in .env
-grep CHANGELOG_REPO .env
-
-# 2. Check GitHub token has repo access
-curl -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/user
-
-# 3. Check Celery worker logs
-docker-compose logs capsule-celery-worker
-
-# 4. Manually trigger changelog generation
-curl -X POST http://localhost:8000/api/pr/1/generate-changelog \
-  -H "X-API-Key: $API_KEY"
-```
-
-### "NVIDIA API Error"
-
-**Problem**: `"Unable to connect to NVIDIA NIM"`
-
-**Fix**:
-```bash
-# 1. Verify API key is correct
-echo $NVIDIA_NIM_API_KEY
-
-# 2. Test connectivity to NVIDIA
-curl -H "Authorization: Bearer $NVIDIA_NIM_API_KEY" \
-  https://integrate.api.nvidia.com/v1/models
-
-# 3. Check if you've exceeded rate limits
-# (Wait a few minutes if rate-limited)
-
-# 4. Use debug logging
-# Set LOG_LEVEL=DEBUG in .env and restart
-docker-compose restart capsule-api-server
-```
-
-### "Jenkins Webhook Not Triggering"
-
-**Problem**: You created a PR but Jenkins didn't run.
-
-**Fix**:
-```bash
-# 1. Check webhook delivery logs in GitHub
-# Settings → Webhooks → [Your Webhook] → Recent Deliveries
-
-# 2. Test the webhook manually
-curl -X POST http://your-jenkins-server/github-webhook/ \
-  -H "Content-Type: application/json" \
-  -d '{"action":"opened","pull_request":{"number":1}}'
-
-# 3. Check Jenkins plugin is installed
-# Manage Jenkins → Plugin Manager → Search "GitHub"
-# Make sure "GitHub Integration Plugin" is installed
-
-# 4. Verify Jenkins can be reached from GitHub
-# Test: curl -I http://your-jenkins-server/github-webhook/
-```
-
-### "Database Connection Error"
-
-**Problem**: `"Cannot connect to postgresql://localhost:5432"`
-
-**Fix**:
-```bash
-# 1. Check if PostgreSQL container is running
-docker-compose ps postgres
-
-# 2. View container logs
-docker-compose logs postgres
-
-# 3. Force restart the database
-docker-compose down -v  # WARNING: This deletes data!
-docker-compose up -d
-
-# 4. Check DATABASE_URL in .env is correct
-# Should be: postgresql+asyncpg://postgres:postgres@postgres:5432/capsule
-```
-
----
-
-## For the Curious: How the AI Works
-
-### The 8-Layer Anti-Hallucination Shield
-
-Why we don't trust AI blindly:
-
-1. **Temperature 0.1** - Keeps responses consistent, not creative
-2. **Confidence scoring** - AI rates how sure it is (we ignore low-confidence findings)
-3. **Fact grounding** - Cross-references findings against actual file changes
-4. **BRD validation** - Only reports violations actually mentioned in your BRD
-5. **File existence checks** - Verifies modified files actually exist
-6. **Pattern matching** - Double-checks findings with regex patterns
-7. **Human review prompts** - Flags findings for manual review if unsure
-8. **Changelog validation** - Makes sure generated entries match actual changes
-
-**Result**: You get AI analysis you can actually trust, not hallucinations.
-
-### Map-Reduce with a Holistic Reduce Pass
-
-Capsule analyzes large PRs in two stages so nothing gets silently dropped:
-
-1. **Map** – The unified diff is split into file-bounded chunks (`max 300 lines` each) and analyzed concurrently. This keeps any single PR within the LLM's context window.
-2. **Reduce (holistic)** – The merged per-chunk results are sent back to the LLM **once** for a global pass. This captures relationships that span chunks (renamed functions, shared helpers, cro[...])
-3. **Critic + Cross-validate** – The reduced output is verified against the raw diff and stripped of any fabricated file references (see the 8-Layer Shield above).
-
-The holistic reduce pass is controlled by `GLOBAL_REDUCE_ENABLED` (default `true`). Set it to `false` to skip the extra LLM call and fall back to the raw merged chunks for lower latency/cost.
-
----
-
-## Multi-Repo Deep Dive
-
-### How It Actually Works
-
-Say you have 3 repos with these webhooks all pointing to the same Jenkins:
-
-```
-Frontend: https://github.com/acme/app-ui
-  ↓ PR opened
-  → Webhook to Jenkins
-
-Backend: https://github.com/acme/app-api
-  ↓ PR opened
-  → Webhook to Jenkins
-
-Shared: https://github.com/acme/app-shared
-  ↓ PR opened
-  → Webhook to Jenkins
-```
-
-When your team merges PRs to main across all 3 repos, Capsule:
-
-1. **Collects all merged PRs** from PostgreSQL
-2. **Retrieves cached analysis** from Redis (fast!)
-3. **Aggregates results** - Groups by repo, calculates overall SemVer bump
-4. **Generates consolidated changelog** - One entry per PR, organized by repo
-5. **Bumps version** - Highest impact determines version bump (MAJOR > MINOR > PATCH)
-6. **Pushes to release repo** - Updates `changelog.txt` with new version and all entries
-
-### Data Flow
-
-```mermaid
-%%{init: {'theme': 'dark', 'themeVariables': { 'fontSize': '16px', 'fontFamily': 'arial', 'primaryTextColor':'#ffffff', 'primaryBorderColor':'#cccccc', 'lineColor':'#ffffff', 'secondBkgColor':'#1e1e1e', 'tertiaryTextColor':'#ffffff', 'fontFamily': 'helvetica' }}}%%
-sequenceDiagram
-    participant Dev as Developer
-    participant GH as GitHub
-    participant Jenkins as Jenkins
-    participant Cache as Redis Cache
-    participant DB as PostgreSQL
-    participant AI as NVIDIA LLM
-    participant Release as Release Repo
-
-    Dev->>GH: Open PR in app-ui
-    GH->>Jenkins: Webhook
-    Jenkins->>DB: Store PR metadata
-    DB->>DB: Query BRD (business rules)
-    Jenkins->>AI: Send PR diff + BRD
-    AI-->>Jenkins: Analysis result
-    Jenkins->>Cache: Store analysis (10 min TTL)
-    GH->>GH: Show Capsule badge on PR
-
-    Note over Dev: ... time passes ...
-    
-    Dev->>GH: Merge PR to main
-    GH->>Jenkins: Webhook (PR merged)
-    Jenkins->>DB: Query all merged PRs
-    DB-->>Jenkins: List of merged PRs
-    Jenkins->>Cache: Fetch cached analysis
-    Cache-->>Jenkins: Analysis results
-    Jenkins->>Jenkins: Aggregate + calculate SemVer
-    Jenkins->>Release: Push changelog v1.2.3
-    Release->>GH: Create commit + tag
-```
-
----
-
-## What's Next?
-
-- **Self-host**: Run this on your own server instead of localhost
-- **Custom AI models**: Swap NVIDIA LLM for your own model
-- **Slack notifications**: Get alerts when high-impact PRs are analyzed
-- **Policy enforcement**: Automatically block merges that violate rules
-
----
-
-## Help & Support
-
-### Find an Issue?
-
-1. Check [existing issues](https://github.com/PTejasKr/Capsule/issues)
-2. Create a new issue with:
-   - What you were trying to do
-   - What happened
-   - Full error message (screenshot is fine)
-   - Your setup (Docker? Jenkins version? etc.)
-
-### Want to Contribute?
-
-- Fork the repo
-- Create a feature branch
-- Make your changes
-- Submit a PR
-
-We read all submissions! 🙏
-
----
-
-## License
-
-MIT - Do whatever you want with this, just don't blame us if it breaks production. (Just kidding, please test first.)
-
----
-
-**Made by engineers, for engineers.**
-
-*Questions? Issues? Ideas? Create an issue or start a discussion. We're here to help.*
-
-**Latest version**: 1.1.0 | **Last updated**: 2026-06-30 | **Status**: ✅ Production Ready
+Contributions, feature requests, and bug reports are welcome!  
+Distributed under the **MIT License**. See `LICENSE` for details.
