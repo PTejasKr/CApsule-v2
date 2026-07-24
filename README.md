@@ -404,7 +404,7 @@ curl http://localhost:8000/api/health
 5. Select the `extension` folder in your Capsule directory
 6. Click on the Capsule icon → Settings
 7. Enter:
-   - Backend URL: `http://localhost:8000`
+   - Backend URL: `https://capsule-backend-d1fp.onrender.com` (or `http://localhost:8000` for local dev)
    - API Key: (the one from `.env` → `API_KEY`)
 8. Click Save
 
@@ -414,20 +414,20 @@ If you're using Jenkins (and most teams are):
 
 1. Go to **Manage Jenkins** → **Manage Credentials**
 2. Add a new credential:
-   - Kind: "Username with password"
-   - Username: `capsule-bot`
-   - Password: (the API_KEY from your `.env`)
+   - Kind: "Secret text"
+   - Secret: (the API_KEY from your `.env`)
    - ID: `capsule-api-key`
 3. Click Create
 
 Then, in your GitHub repo:
 1. Settings → Webhooks → Add webhook
-2. URL: `http://your-jenkins-server/github-webhook/`
+2. Payload URL: `https://capsule-backend-d1fp.onrender.com/api/webhooks/github` (or your Jenkins generic webhook URL)
 3. Content-type: `application/json`
-4. Trigger: "Let me select individual events" → Check "Pull requests" and "Pushes"
-5. Click Add webhook
+4. Secret: (your `GITHUB_WEBHOOK_SECRET`)
+5. Trigger: "Let me select individual events" → Check "Pull requests"
+6. Click Add webhook
 
-Finally, copy the Jenkinsfile to your repo root:
+Finally, view the Jenkinsfile in `jenkins/Jenkinsfile` or copy it to your repo root:
 ```bash
 cp jenkins/Jenkinsfile ./Jenkinsfile
 ```
