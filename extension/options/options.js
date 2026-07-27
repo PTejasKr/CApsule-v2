@@ -55,55 +55,62 @@ document.addEventListener("DOMContentLoaded", () => {
         const config = await configRes.json();
         
         const clientId = config.github_client_id;
-        const redirectUrl = chrome.identity.getRedirectURL();
+        const redirectUrl = (typeof chrome !== "undefined" && chrome.identity && typeof chrome.identity.getRedirectURL === "function") 
+          ? chrome.identity.getRedirectURL() 
+          : `${window.location.origin}/admin`;
         
         const authUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUrl)}&scope=read:org`;
         
-        chrome.identity.launchWebAuthFlow(
-          { url: authUrl, interactive: true },
-          async (redirectUri) => {
-            if (chrome.runtime.lastError || !redirectUri) {
-              btnGithubLogin.disabled = false;
-              btnGithubLogin.innerHTML = originalText;
-              authError.textContent = chrome.runtime.lastError?.message || "Auth flow cancelled";
-              authError.style.display = "block";
-              setTimeout(() => { authError.style.display = "none"; }, 5000);
-              return;
-            }
-            
-            const urlParams = new URLSearchParams(new URL(redirectUri).search);
-            const code = urlParams.get("code");
-            if (!code) {
-              throw new Error("No OAuth code received");
-            }
-            
-            btnGithubLogin.innerHTML = 'Verifying org...';
-            
-            try {
-              const verifyRes = await fetch(`${backendUrl}/api/auth/extension/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ code })
-              });
-              
-              const verifyData = await verifyRes.json();
-              
-              if (verifyRes.ok && verifyData.api_key) {
-                await chrome.storage.local.set({ apiKey: verifyData.api_key, apiUrl: backendUrl, backendUrl: backendUrl });
-                btnGithubLogin.style.display = "none";
-                btnEnterDashboard.style.display = "block";
-              } else {
-                throw new Error(verifyData.detail || "Verification failed");
+        if (typeof chrome !== "undefined" && chrome.identity && typeof chrome.identity.launchWebAuthFlow === "function") {
+          chrome.identity.launchWebAuthFlow(
+            { url: authUrl, interactive: true },
+            async (redirectUri) => {
+              if ((typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.lastError) || !redirectUri) {
+                btnGithubLogin.disabled = false;
+                btnGithubLogin.innerHTML = originalText;
+                authError.textContent = (chrome.runtime && chrome.runtime.lastError?.message) || "Auth flow cancelled";
+                authError.style.display = "block";
+                setTimeout(() => { authError.style.display = "none"; }, 5000);
+                return;
               }
-            } catch (err) {
-              authError.textContent = err.message || "Backend verification failed";
-              authError.style.display = "block";
-              btnGithubLogin.disabled = false;
-              btnGithubLogin.innerHTML = originalText;
-              setTimeout(() => { authError.style.display = "none"; }, 5000);
+              
+              const urlParams = new URLSearchParams(new URL(redirectUri).search);
+              const code = urlParams.get("code");
+              if (!code) {
+                throw new Error("No OAuth code received");
+              }
+              
+              btnGithubLogin.innerHTML = 'Verifying org...';
+              
+              try {
+                const verifyRes = await fetch(`${backendUrl}/api/auth/extension/login`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ code })
+                });
+                
+                const verifyData = await verifyRes.json();
+                
+                if (verifyRes.ok && verifyData.api_key) {
+                  await chrome.storage.local.set({ apiKey: verifyData.api_key, apiUrl: backendUrl, backendUrl: backendUrl });
+                  btnGithubLogin.style.display = "none";
+                  btnEnterDashboard.style.display = "block";
+                } else {
+                  throw new Error(verifyData.detail || "Verification failed");
+                }
+              } catch (err) {
+                authError.textContent = err.message || "Backend verification failed";
+                authError.style.display = "block";
+                btnGithubLogin.disabled = false;
+                btnGithubLogin.innerHTML = originalText;
+                setTimeout(() => { authError.style.display = "none"; }, 5000);
+              }
             }
-          }
-        );
+          );
+        } else {
+          // Web browser / PWA context: direct redirect
+          window.location.href = authUrl;
+        }
       } catch (err) {
         authError.textContent = err.message || "Failed to initialize auth";
         authError.style.display = "block";

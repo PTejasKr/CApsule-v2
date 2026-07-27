@@ -121,6 +121,17 @@ if (typeof chrome === "undefined" || !chrome.storage) {
     }
   };
 }
+if (!window.chrome.identity) {
+  window.chrome.identity = {
+    getRedirectURL: () => window.location.origin + "/admin",
+    launchWebAuthFlow: (details, callback) => {
+      window.location.href = details.url;
+    }
+  };
+}
+if (!window.chrome.runtime) {
+  window.chrome.runtime = { lastError: null };
+}
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/admin/sw.js')
