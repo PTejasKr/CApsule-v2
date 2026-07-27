@@ -99,10 +99,23 @@ app.post("/api/webhook/github", status_code=200, dependencies=[Depends(verify_gi
 
 from fastapi.responses import HTMLResponse, FileResponse
 
+def find_static_file(*relative_segments):
+    base_dirs = [
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        os.getcwd(),
+        os.path.dirname(os.path.abspath(__file__)),
+        os.path.abspath(os.path.join(os.path.dirname(__file__), "..")),
+    ]
+    for b in base_dirs:
+        candidate = os.path.join(b, *relative_segments)
+        if os.path.exists(candidate):
+            return candidate
+    return None
+
 @app.get("/admin", response_class=HTMLResponse)
 def get_admin_page():
-    options_html = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "extension", "options", "options.html")
-    if os.path.exists(options_html):
+    options_html = find_static_file("extension", "options", "options.html")
+    if options_html and os.path.exists(options_html):
         with open(options_html, "r", encoding="utf-8") as f:
             html = f.read()
             polyfill = """<link rel="manifest" href="/admin/manifest.webmanifest">
@@ -147,29 +160,29 @@ if ('serviceWorker' in navigator) {
 
 @app.get("/admin/options.js")
 def get_admin_js():
-    options_js = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "extension", "options", "options.js")
-    if os.path.exists(options_js):
+    options_js = find_static_file("extension", "options", "options.js")
+    if options_js and os.path.exists(options_js):
         return FileResponse(options_js, media_type="application/javascript")
     return HTMLResponse("// options.js not found", status_code=404)
 
 @app.get("/admin/manifest.webmanifest")
 def get_admin_manifest():
-    manifest_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "extension", "options", "manifest.webmanifest")
-    if os.path.exists(manifest_path):
+    manifest_path = find_static_file("extension", "options", "manifest.webmanifest")
+    if manifest_path and os.path.exists(manifest_path):
         return FileResponse(manifest_path, media_type="application/manifest+json")
     return JSONResponse({}, status_code=404)
 
 @app.get("/admin/sw.js")
 def get_admin_sw():
-    sw_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "extension", "options", "sw.js")
-    if os.path.exists(sw_path):
+    sw_path = find_static_file("extension", "options", "sw.js")
+    if sw_path and os.path.exists(sw_path):
         return FileResponse(sw_path, media_type="application/javascript")
     return HTMLResponse("// sw.js not found", status_code=404)
 
 @app.get("/admin/icon128.png")
 def get_admin_icon():
-    icon_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "extension", "icons", "icon128.png")
-    if os.path.exists(icon_path):
+    icon_path = find_static_file("extension", "icons", "icon128.png")
+    if icon_path and os.path.exists(icon_path):
         return FileResponse(icon_path, media_type="image/png")
     return HTMLResponse("Icon not found", status_code=404)
 
