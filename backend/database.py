@@ -69,6 +69,8 @@ async def init_db():
             ai_model TEXT NOT NULL,
             brd_content TEXT,
             github_token TEXT,
+            custom_rules TEXT,
+            is_super_admin BOOLEAN DEFAULT {false_val},
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )""",
         """CREATE TABLE IF NOT EXISTS brd_versions (
@@ -79,9 +81,23 @@ async def init_db():
             hash TEXT NOT NULL UNIQUE,
             profile_id INTEGER NOT NULL REFERENCES profiles(id) ON DELETE CASCADE
         )""",
+        """CREATE TABLE IF NOT EXISTS teams (
+            id {serial_pk},
+            name TEXT NOT NULL,
+            owner_profile_id INTEGER NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )""",
+        """CREATE TABLE IF NOT EXISTS team_members (
+            id {serial_pk},
+            team_id INTEGER NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+            profile_id INTEGER NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+            role TEXT DEFAULT 'member',
+            joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )""",
         """CREATE TABLE IF NOT EXISTS repository_mappings (
             source_repo TEXT PRIMARY KEY,
-            profile_id INTEGER NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+            team_id INTEGER REFERENCES teams(id),
+            profile_id INTEGER REFERENCES profiles(id) ON DELETE CASCADE,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )""",
         """CREATE TABLE IF NOT EXISTS pr_analyses (
@@ -96,6 +112,8 @@ async def init_db():
             changes_json TEXT,
             workflow_impact_json TEXT,
             confidence_score REAL,
+            author TEXT,
+            merged_at TEXT,
             analyzed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (pr_number, repo)
         )""",
@@ -134,10 +152,22 @@ async def init_db():
                 stmt = stmt.replace(k, v)
             await db_conn.execute(stmt)
             
-        try:
-            await db_conn.execute("ALTER TABLE pr_analyses ADD COLUMN brd_comparison TEXT;")
-        except Exception:
-            pass
+        # Safe migrations for existing databases — each wrapped in try/except
+        _migrations = [
+            "ALTER TABLE pr_analyses ADD COLUMN brd_comparison TEXT;",
+            "ALTER TABLE profiles ADD COLUMN custom_rules TEXT;",
+            "ALTER TABLE profiles ADD COLUMN is_super_admin BOOLEAN DEFAULT {false_val};",
+            "ALTER TABLE repository_mappings ADD COLUMN team_id INTEGER REFERENCES teams(id);",
+            "ALTER TABLE pr_analyses ADD COLUMN author TEXT;",
+            "ALTER TABLE pr_analyses ADD COLUMN merged_at TEXT;",
+        ]
+        for migration in _migrations:
+            try:
+                for k, v in replacements.items():
+                    migration = migration.replace(k, v)
+                await db_conn.execute(migration)
+            except Exception:
+                pass
 
     if is_postgres:
         logger.info("Initializing PostgreSQL database...")
@@ -251,7 +281,8 @@ async def insert(table: str, data: dict) -> int:
 
         _ALLOWED_TABLES = {
             "pr_analyses", "profiles", "repository_mappings",
-            "brd_versions", "changelog_entries", "audit_log"
+            "brd_versions", "changelog_entries", "audit_log",
+            "teams", "team_members"
         }
         _ALLOWED_COLUMNS = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
 
@@ -275,7 +306,7 @@ async def insert(table: str, data: dict) -> int:
             else:
                 sql += f" ON CONFLICT ({conflict_cols}) DO NOTHING"
         
-        if table in ["brd_versions", "profiles", "changelog_entries", "audit_log"]:
+        if table in ["brd_versions", "profiles", "changelog_entries", "audit_log", "teams", "team_members"]:
             sql += " RETURNING id"
         
         async with pool.acquire() as conn:

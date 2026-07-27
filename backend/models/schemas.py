@@ -19,6 +19,7 @@ class ChangeItem(BaseModel):
     change_type: ChangeType = Field(..., description="The type of change (added, modified, deleted)")
     description: str = Field(..., description="Brief, clear description of the specific code changes")
     confidence: float = Field(..., description="Confidence score (0.0 to 1.0) of this change description")
+    reasoning_trace: Optional[str] = Field("", description="AI reasoning trace explaining how this change was identified")
 
 class WorkflowImpact(BaseModel):
     has_impact: bool = Field(..., description="Whether the changes alter any business workflow defined in the BRD")
@@ -67,6 +68,7 @@ class ProfileCreate(BaseModel):
     ai_model: str = Field("meta/llama-3.1-70b-instruct", description="NVIDIA NIM model name")
     brd_content: Optional[str] = Field(None, description="Optional BRD content specific to this profile")
     github_token: Optional[str] = Field(None, description="GitHub token for 1-click deployment")
+    custom_rules: Optional[str] = Field(None, description="Additional analysis policy text for custom review rules")
 
 class ProfileResponse(ProfileCreate):
     id: int
@@ -74,6 +76,7 @@ class ProfileResponse(ProfileCreate):
 class RepositoryMappingCreate(BaseModel):
     source_repo: str = Field(..., description="The repository triggering the webhook (owner/repo)")
     profile_id: int = Field(..., description="The ID of the profile to use")
+    team_id: Optional[int] = Field(None, description="The ID of the team that owns this repository mapping")
 
 class WebhookDeployRequest(BaseModel):
     source_repo: str = Field(..., description="The repository to deploy to (owner/repo)")
